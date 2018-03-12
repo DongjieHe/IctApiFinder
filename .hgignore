@@ -1,0 +1,22 @@
+# Plain Ignore
+data/SDK/*
+.setting/*
+.classpath
+.project
+build/*
+bin/*
+.gradle/*
+DifferentSimAns/*
+CommonSimAns/*
+UndecidedOldInterface/*
+UndecidedOldClass/*
+UndecidedNewInterface/*
+UndecidedNewClass/*
+WhySimAns/*
+
+# use glob syntax.
+syntax: glob
+**.dot
+
+# switch to regexp syntax.
+syntax: regexp

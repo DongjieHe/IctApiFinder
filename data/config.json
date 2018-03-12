@@ -1,0 +1,8 @@
+{
+"SDK_DB_DIR":"data/SDK/",
+"MIN_SDK_VERSION":16,
+"MAX_SDK_VERSION":27,
+"APK_TEST_SET":"/home/hedj/Work/android/fdroidRepo/",
+"OUT_DIR": "data/out/"
+}
+

@@ -1,0 +1,44 @@
+apply plugin: 'java'
+apply plugin: 'eclipse'
+apply plugin: 'application'
+
+group = 'ict.pag'
+version = '0.0.1-SNAPSHOT'
+
+description = """APICompatFinder"""
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+tasks.withType(JavaCompile) {
+	options.encoding = 'UTF-8'
+}
+
+// In this section you declare where to find the dependencies of your project
+repositories {
+	maven { url "https://soot-build.cs.uni-paderborn.de/nexus/repository/soot-snapshot" }
+    maven { url "https://soot-build.cs.uni-paderborn.de/nexus/repository/soot-release" }
+    maven { url "http://repo.maven.apache.org/maven2" }
+    mavenCentral()
+}
+
+eclipse {
+    classpath {
+        downloadJavadoc = true
+        downloadSources = true
+    }
+}
+
+dependencies {
+	compile "ca.mcgill.sable:soot:3.0.0-SNAPSHOT"
+    compile "ca.mcgill.sable:jasmin:2.5.0-SNAPSHOT"
+    compile "heros:heros:0.0.1-SNAPSHOT"
+    compile "de.tud.sse:soot-infoflow:2.0.0-SNAPSHOT"
+    compile "de.tud.sse:soot-infoflow-android:2.0.0-SNAPSHOT"
+	compile group: 'org.json', name: 'json', version: '20171018'
+	compile group: 'commons-io', name: 'commons-io', version: '2.6'
+}
+
+mainClassName = "ict.pag.main.Main"
+run {
+}
+
