@@ -30,6 +30,27 @@ public class SdkAPIs {
 		return this.mFieldSigs.contains(sig);
 	}
 
+	public boolean containAPI(String apiSig, int apiType) {
+		if (apiType == 0) {
+			return containType(apiSig);
+		} else if (apiType == 1) {
+			return containMethod(apiSig);
+		} else if (apiType == 2) {
+			return containField(apiSig);
+		} else {
+			assert false;
+			return false;
+		}
+	}
+
+	public Set<String> getMethodSigs() {
+		return mMethodSigs;
+	}
+
+	public Set<String> getFieldSigs() {
+		return mFieldSigs;
+	}
+
 	public int getmApiLevel() {
 		return mApiLevel;
 	}

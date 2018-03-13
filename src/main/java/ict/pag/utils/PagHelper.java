@@ -11,7 +11,17 @@ import soot.DexClassProvider;
 import soot.G;
 import soot.Scene;
 import soot.SootClass;
+import soot.Value;
+import soot.jimple.IfStmt;
+import soot.jimple.IntConstant;
 import soot.jimple.infoflow.android.manifest.ProcessManifest;
+import soot.jimple.internal.AbstractJimpleIntBinopExpr;
+import soot.jimple.internal.JEqExpr;
+import soot.jimple.internal.JGeExpr;
+import soot.jimple.internal.JGtExpr;
+import soot.jimple.internal.JLeExpr;
+import soot.jimple.internal.JLtExpr;
+import soot.jimple.internal.JNeExpr;
 import soot.options.Options;
 
 public class PagHelper {
@@ -98,4 +108,29 @@ public class PagHelper {
 		scene.loadNecessaryClasses();
 		return classes;
 	}
+
+	public static boolean isConcernIfStmt(IfStmt is, HashSet<Value> vs) {
+		Value cond = is.getCondition();
+		boolean flag = false;
+		flag |= (cond instanceof JGtExpr);
+		flag |= (cond instanceof JGeExpr);
+		flag |= (cond instanceof JEqExpr);
+		flag |= (cond instanceof JNeExpr);
+		flag |= (cond instanceof JLeExpr);
+		flag |= (cond instanceof JLtExpr);
+		if (flag == false) {
+			return false;
+		} else {
+			AbstractJimpleIntBinopExpr jbe = (AbstractJimpleIntBinopExpr) cond;
+			Value v1 = jbe.getOp1();
+			Value v2 = jbe.getOp2();
+			if (vs.contains(v1) && v2 instanceof IntConstant) {
+				return true;
+			} else if (vs.contains(v2) && v1 instanceof IntConstant) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 }
