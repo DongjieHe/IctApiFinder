@@ -48,6 +48,8 @@ public class SdkAPIMgr {
 	}
 
 	public boolean containAPI(int idx, String sig) {
+		// not check level 20;
+		if(idx == 20) return true;
 		if (level2SdkAPIs.containsKey(idx)) {
 			SdkAPIs sdkAPIs = level2SdkAPIs.get(idx);
 			return sdkAPIs.containMethod(sig) || sdkAPIs.containField(sig);

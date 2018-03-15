@@ -1,12 +1,17 @@
 package ict.pag.utils;
 
 import java.io.File;
-import java.util.*;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Set;
 
 import org.jf.dexlib2.DexFileFactory;
 import org.jf.dexlib2.Opcodes;
 import org.jf.dexlib2.dexbacked.DexBackedDexFile;
 
+import ict.pag.global.ConfigMgr;
 import soot.DexClassProvider;
 import soot.G;
 import soot.Scene;
@@ -133,4 +138,44 @@ public class PagHelper {
 		return false;
 	}
 
+	public static Set<Integer> fetchKillingSet(IfStmt stmt) {
+		int mMinVersion = ConfigMgr.v().getMinSdkVersion();
+		int mMaxVersion = ConfigMgr.v().getMaxSdkVersion();
+		Set<Integer> ret = new HashSet<Integer>();
+		AbstractJimpleIntBinopExpr cond = (AbstractJimpleIntBinopExpr) stmt.getCondition();
+		IntConstant v2 = (IntConstant) cond.getOp2();
+		int value = v2.value;
+		if(cond instanceof JGtExpr) {
+			int top = Math.min(value, mMaxVersion);
+			for(int i = mMinVersion; i <= top; ++i) {
+				ret.add(i);
+			}
+		} else if(cond instanceof JGeExpr) {
+			int top = Math.min(value, mMaxVersion);
+			for(int i = mMinVersion; i < top; ++i) {
+				ret.add(i);
+			}
+		} else if(cond instanceof JEqExpr) {
+			for(int i = mMinVersion; i <= mMaxVersion; ++i) {
+				if(i != value) {
+					ret.add(i);
+				}
+			}
+		} else if(cond instanceof JNeExpr) {
+			if(value <= mMaxVersion && value >= mMinVersion) {
+				ret.add(value);
+			}
+		} else if(cond instanceof JLeExpr) {
+			int bottom = Math.max(mMinVersion, value);
+			for(int i = bottom + 1; i <= mMaxVersion; ++i) {
+				ret.add(i);
+			}
+		} else if(cond instanceof JLtExpr) {
+			int bottom = Math.max(mMinVersion, value);
+			for(int i = bottom ; i <= mMaxVersion; ++i) {
+				ret.add(i);
+			}
+		}
+		return ret;
+	}
 }

@@ -1,5 +1,6 @@
 # Plain Ignore
 data/SDK/*
+data/out/*
 .setting/*
 .classpath
 .project

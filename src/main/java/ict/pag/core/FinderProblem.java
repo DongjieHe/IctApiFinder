@@ -11,7 +11,6 @@ import org.slf4j.LoggerFactory;
 import heros.FlowFunctions;
 import soot.SootMethod;
 import soot.Unit;
-import soot.jimple.infoflow.solver.cfg.IInfoflowCFG;
 import soot.jimple.toolkits.ide.DefaultJimpleIFDSTabulationProblem;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 
@@ -21,11 +20,9 @@ public class FinderProblem
 	protected final Map<Unit, Set<FinderFact>> initialSeeds = new HashMap<Unit, Set<FinderFact>>();
 	protected final Logger logger = LoggerFactory.getLogger(getClass());
 	private FinderFact zeroValue = null;
-	private BiDiInterproceduralCFG<Unit, SootMethod> mIcfg;
 
 	public FinderProblem(BiDiInterproceduralCFG<Unit, SootMethod> icfg) {
 		super(icfg);
-		mIcfg = icfg;
 	}
 
 	/**
@@ -54,8 +51,8 @@ public class FinderProblem
 	}
 
 	@Override
-	public IInfoflowCFG interproceduralCFG() {
-		return (IInfoflowCFG) super.interproceduralCFG();
+	public BiDiInterproceduralCFG<Unit, SootMethod> interproceduralCFG() {
+		return super.interproceduralCFG();
 	}
 
 	@Override
@@ -99,7 +96,17 @@ public class FinderProblem
 
 	@Override
 	public FlowFunctions<Unit, FinderFact, SootMethod> createFlowFunctionsFactory() {
-		return new FinderFlowFunctions();
+		return new FinderFlowFunctions(interproceduralCFG());
+	}
+
+	@Override
+	public int numThreads() {
+		// return super.numThreads();
+		return 1;
+	}
+
+	public void setThreadsNum(int n) {
+		n = Math.max(1, n);
 
 	}
 }
