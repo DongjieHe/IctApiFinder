@@ -1,4 +1,4 @@
-package ict.pag.main;
+package ict.pag.core;
 
 import java.util.HashSet;
 

@@ -1,4 +1,4 @@
-package ict.pag.main;
+package ict.pag.datalog;
 
 import java.io.File;
 import java.util.HashMap;
@@ -6,9 +6,6 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-
-import ict.pag.datalog.Executor;
-import ict.pag.datalog.LBWorkspaceConnector;
 
 public class SdkAPIMgr {
 	private int minLevel;
@@ -28,7 +25,7 @@ public class SdkAPIMgr {
 			if (i == 20) {
 				continue; // api level 20 is a special case.
 			}
-			String sdkPath = sdkDir + File.separator + i;
+			String sdkPath = sdkDir + File.separator + "android-" + i;
 			LBWorkspaceConnector conn = new LBWorkspaceConnector(executor, sdkPath, i);
 			conn.connect("database");
 			SdkAPIs tmp = new SdkAPIs(conn);

@@ -5,6 +5,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
+import ict.pag.core.SdkIntMustAliasAnalysis;
 import ict.pag.utils.PagHelper;
 import soot.Body;
 import soot.SootClass;

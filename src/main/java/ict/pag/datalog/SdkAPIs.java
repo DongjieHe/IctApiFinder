@@ -1,9 +1,6 @@
-package ict.pag.main;
+package ict.pag.datalog;
 
 import java.util.Set;
-
-import ict.pag.datalog.FactsLoader;
-import ict.pag.datalog.LBWorkspaceConnector;
 
 public class SdkAPIs {
 	private int mApiLevel;
