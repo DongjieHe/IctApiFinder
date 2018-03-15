@@ -38,7 +38,9 @@ dependencies {
 	compile group: 'commons-io', name: 'commons-io', version: '2.6'
 }
 
-mainClassName = "ict.pag.main.Main"
-run {
+task runMain(type: JavaExec) {
+	main = "ict.pag.main.Main"
+	classpath = sourceSets.main.runtimeClasspath
+	args = ["/home/hedj/Work/android/fdroidNewest/"]
 }
 

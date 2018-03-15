@@ -109,6 +109,7 @@ public class APICompatAnalysis {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+		logger.info("finish analysis " + app.getAppName() + "!");
 	}
 
 	/**

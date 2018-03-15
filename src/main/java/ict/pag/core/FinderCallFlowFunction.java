@@ -19,7 +19,6 @@ public class FinderCallFlowFunction implements FlowFunction<FinderFact> {
 
 	@Override
 	public Set<FinderFact> computeTargets(FinderFact source) {
-		ConcernUnits.v().add(mCallStmt, source.getLevel());
 		Set<FinderFact> retSet = new HashSet<FinderFact>();
 		retSet.add(source);
 		return retSet;
