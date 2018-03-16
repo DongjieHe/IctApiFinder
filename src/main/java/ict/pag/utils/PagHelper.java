@@ -1,25 +1,15 @@
 package ict.pag.utils;
 
-import java.io.File;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
-import org.jf.dexlib2.DexFileFactory;
-import org.jf.dexlib2.Opcodes;
-import org.jf.dexlib2.dexbacked.DexBackedDexFile;
-
+import soot.SootMethod;
 import ict.pag.global.ConfigMgr;
-import soot.DexClassProvider;
-import soot.G;
-import soot.Scene;
-import soot.SootClass;
 import soot.Value;
 import soot.jimple.IfStmt;
 import soot.jimple.IntConstant;
-import soot.jimple.infoflow.android.manifest.ProcessManifest;
 import soot.jimple.internal.AbstractJimpleIntBinopExpr;
 import soot.jimple.internal.JEqExpr;
 import soot.jimple.internal.JGeExpr;
@@ -27,7 +17,6 @@ import soot.jimple.internal.JGtExpr;
 import soot.jimple.internal.JLeExpr;
 import soot.jimple.internal.JLtExpr;
 import soot.jimple.internal.JNeExpr;
-import soot.options.Options;
 
 public class PagHelper {
 
@@ -44,74 +33,11 @@ public class PagHelper {
 		}
 	}
 
-	// return difference set, ret = src - dst.
-	public static <T> Set<T> getDifferenceSet(Set<T> src, Set<T> dst) {
-		Set<T> diffSet = new HashSet<T>(src);
-		diffSet.removeAll(dst);
-		return diffSet;
-	}
-
-	public static <T> Set<T> getIntersectionSet(Set<T> src, Set<T> dst) {
-		Set<T> intersectionSet = new HashSet<T>(src);
-		intersectionSet.retainAll(dst);
-		return intersectionSet;
-	}
-
-	public static int getMinSdkVersion(String apkPath) throws Exception {
-		ProcessManifest manifest;
-		manifest = new ProcessManifest(apkPath);
-		int minLevel = manifest.getMinSdkVersion();
-		if (minLevel == -1) {
-			minLevel = 1;
+	public static String[] trimArray(String[] args) {
+		for (int i = 0; i < args.length; ++i) {
+			args[i] = args[i].trim();
 		}
-		return minLevel;
-	}
-
-	public static int getTargetSdkVersion(String apkPath) throws Exception {
-		ProcessManifest manifest;
-		int api = 1;
-		manifest = new ProcessManifest(apkPath);
-		api = manifest.targetSdkVersion();
-		int minLevel = manifest.getMinSdkVersion();
-		if (api == -1) {
-			if (minLevel != -1) {
-				api = minLevel;
-			} else {
-				api = 1;
-			}
-		}
-		return api;
-	}
-
-	public static Set<SootClass> loadAPKClasses(String path) throws Exception {
-		G.v();
-		G.reset();
-		Options.v().set_no_bodies_for_excluded(true);
-		Options.v().set_process_multiple_dex(true);
-		Options.v().set_allow_phantom_refs(true);
-		Options.v().set_output_format(Options.output_format_none);
-		Options.v().set_whole_program(true);
-		Options.v().set_process_dir(Collections.singletonList(path));
-		Options.v().set_src_prec(Options.src_prec_apk_class_jimple);
-		Options.v().set_keep_line_number(false);
-		Options.v().set_keep_offset(false);
-		Options.v().set_throw_analysis(Options.throw_analysis_dalvik);
-		Options.v().set_soot_classpath(
-				".:/usr/local/java/jdk8/jre/lib/rt.jar:/usr/local/java/jdk8/jre/lib/jce.jar:/usr/local/java/jdk8/jre/lib/jsse.jar");
-
-		Scene scene = Scene.v();
-		Set<SootClass> classes = new HashSet<SootClass>();
-		File apk = new File(path);
-		DexBackedDexFile dexFile;
-		int api = PagHelper.getTargetSdkVersion(path);
-		dexFile = DexFileFactory.loadDexFile(apk, Opcodes.forApi(api));
-		Set<String> classNames = DexClassProvider.classesOfDex(dexFile);
-		for (String className : classNames) {
-			SootClass c = scene.loadClass(className, SootClass.BODIES);
-			classes.add(c);
-		}
-		scene.loadNecessaryClasses();
-		return classes;
+		return args;
 	}
 
 	public static boolean isConcernIfStmt(IfStmt is, HashSet<Value> vs) {
@@ -143,39 +69,93 @@ public class PagHelper {
 		int mMaxVersion = ConfigMgr.v().getMaxSdkVersion();
 		Set<Integer> ret = new HashSet<Integer>();
 		AbstractJimpleIntBinopExpr cond = (AbstractJimpleIntBinopExpr) stmt.getCondition();
-		IntConstant v2 = (IntConstant) cond.getOp2();
-		int value = v2.value;
-		if(cond instanceof JGtExpr) {
-			int top = Math.min(value, mMaxVersion);
-			for(int i = mMinVersion; i <= top; ++i) {
-				ret.add(i);
-			}
-		} else if(cond instanceof JGeExpr) {
-			int top = Math.min(value, mMaxVersion);
-			for(int i = mMinVersion; i < top; ++i) {
-				ret.add(i);
-			}
-		} else if(cond instanceof JEqExpr) {
-			for(int i = mMinVersion; i <= mMaxVersion; ++i) {
-				if(i != value) {
+		Value op1 = cond.getOp1();
+		Value op2 = cond.getOp2();
+		if (op2 instanceof IntConstant) {
+			IntConstant v2 = (IntConstant) op2;
+			int value = v2.value;
+			if (cond instanceof JGtExpr) {
+				int top = Math.min(value, mMaxVersion);
+				for (int i = mMinVersion; i <= top; ++i) {
+					ret.add(i);
+				}
+			} else if (cond instanceof JGeExpr) {
+				int top = Math.min(value, mMaxVersion);
+				for (int i = mMinVersion; i < top; ++i) {
+					ret.add(i);
+				}
+			} else if (cond instanceof JEqExpr) {
+				for (int i = mMinVersion; i <= mMaxVersion; ++i) {
+					if (i != value) {
+						ret.add(i);
+					}
+				}
+			} else if (cond instanceof JNeExpr) {
+				if (value <= mMaxVersion && value >= mMinVersion) {
+					ret.add(value);
+				}
+			} else if (cond instanceof JLeExpr) {
+				int bottom = Math.max(mMinVersion, value);
+				for (int i = bottom + 1; i <= mMaxVersion; ++i) {
+					ret.add(i);
+				}
+			} else if (cond instanceof JLtExpr) {
+				int bottom = Math.max(mMinVersion, value);
+				for (int i = bottom; i <= mMaxVersion; ++i) {
 					ret.add(i);
 				}
 			}
-		} else if(cond instanceof JNeExpr) {
-			if(value <= mMaxVersion && value >= mMinVersion) {
-				ret.add(value);
-			}
-		} else if(cond instanceof JLeExpr) {
-			int bottom = Math.max(mMinVersion, value);
-			for(int i = bottom + 1; i <= mMaxVersion; ++i) {
-				ret.add(i);
-			}
-		} else if(cond instanceof JLtExpr) {
-			int bottom = Math.max(mMinVersion, value);
-			for(int i = bottom ; i <= mMaxVersion; ++i) {
-				ret.add(i);
+		} else {
+			assert op1 instanceof IntConstant;
+			IntConstant v1 = (IntConstant) op1;
+			int value = v1.value;
+			if (cond instanceof JGtExpr) {
+				int bottom = Math.max(mMinVersion, value);
+				for (int i = bottom; i <= mMaxVersion; ++i) {
+					ret.add(i);
+				}
+			} else if (cond instanceof JGeExpr) {
+				int bottom = Math.max(mMinVersion, value);
+				for (int i = bottom + 1; i <= mMaxVersion; ++i) {
+					ret.add(i);
+				}
+			} else if (cond instanceof JEqExpr) {
+				for (int i = mMinVersion; i <= mMaxVersion; ++i) {
+					if (i != value) {
+						ret.add(i);
+					}
+				}
+			} else if (cond instanceof JNeExpr) {
+				if (value <= mMaxVersion && value >= mMinVersion) {
+					ret.add(value);
+				}
+			} else if (cond instanceof JLeExpr) {
+				int top = Math.min(value, mMaxVersion);
+				for (int i = mMinVersion; i < top; ++i) {
+					ret.add(i);
+				}
+			} else if (cond instanceof JLtExpr) {
+				int top = Math.min(value, mMaxVersion);
+				for (int i = mMinVersion; i <= top; ++i) {
+					ret.add(i);
+				}
 			}
 		}
 		return ret;
+	}
+
+	public static String descriptor(SootMethod m) {
+		StringBuilder builder = new StringBuilder();
+		builder.append(m.getReturnType().toString());
+		builder.append("(");
+		for (int i = 0; i < m.getParameterCount(); i++) {
+			builder.append(m.getParameterType(i));
+
+			if (i != m.getParameterCount() - 1) {
+				builder.append(",");
+			}
+		}
+		builder.append(")");
+		return builder.toString();
 	}
 }

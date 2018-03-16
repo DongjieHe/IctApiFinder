@@ -8,6 +8,10 @@ import heros.FlowFunction;
 import ict.pag.global.ConcernUnits;
 import soot.SootMethod;
 import soot.Unit;
+import soot.Value;
+import soot.jimple.AssignStmt;
+import soot.jimple.InstanceFieldRef;
+import soot.jimple.StaticFieldRef;
 import soot.jimple.internal.JIfStmt;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 
@@ -30,7 +34,8 @@ public class FinderNormalFlowFunction implements FlowFunction<FinderFact> {
 			Unit tgt = stmt.getTarget();
 			Set<Integer> killSet = ConcernUnits.v().getKillSet(mCurr);
 			List<Unit> succs = mInterCFG.getSuccsOf(mCurr);
-			assert succs.size() == 2;
+			// assert succs.size() == 2;
+			// !TODO why there are more than 2 successors follow an if statement?
 			if (mSucc.equals(tgt)) {
 				if (!killSet.contains(source.getLevel())) {
 					retSet.add(source);
@@ -42,6 +47,15 @@ public class FinderNormalFlowFunction implements FlowFunction<FinderFact> {
 			}
 		} else {
 			retSet.add(source);
+			// collect field API live level.
+			if (mCurr instanceof AssignStmt) {
+				Value right = ((AssignStmt) mCurr).getRightOp();
+				if (right instanceof InstanceFieldRef || right instanceof StaticFieldRef) {
+					if (ConcernUnits.v().containAPI(mCurr)) {
+						ConcernUnits.v().add(mCurr, source.getLevel());
+					}
+				}
+			}
 		}
 		return retSet;
 	}

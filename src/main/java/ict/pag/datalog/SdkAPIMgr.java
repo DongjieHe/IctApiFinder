@@ -7,6 +7,10 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import ict.pag.utils.PagHelper;
+import soot.SootClass;
+import soot.SootMethod;
+
 public class SdkAPIMgr {
 	private int minLevel;
 	private int maxLevel;
@@ -49,7 +53,8 @@ public class SdkAPIMgr {
 
 	public boolean containAPI(int idx, String sig) {
 		// not check level 20;
-		if(idx == 20) return true;
+		if (idx == 20)
+			return true;
 		if (level2SdkAPIs.containsKey(idx)) {
 			SdkAPIs sdkAPIs = level2SdkAPIs.get(idx);
 			return sdkAPIs.containMethod(sig) || sdkAPIs.containField(sig);
@@ -63,5 +68,36 @@ public class SdkAPIMgr {
 		for (Entry<Integer, SdkAPIs> entry : level2SdkAPIs.entrySet()) {
 			entry.getValue().dump();
 		}
+	}
+
+	public boolean containMethodAPI(int level, SootMethod callee) {
+		if (level == 20)
+			return true;
+		if (level2SdkAPIs.containsKey(level)) {
+			SdkAPIs sdkAPIs = level2SdkAPIs.get(level);
+			String calleeSig = callee.getSignature();
+			if (sdkAPIs.containMethod(calleeSig)) {
+				return true;
+			} else {
+				SootClass declClazz = callee.getDeclaringClass();
+				String decl = declClazz.getName();
+				String desc = PagHelper.descriptor(callee);
+				String father = sdkAPIs.getFather(decl);
+				if (father != null && sdkAPIs.containAPI(father, desc)) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	public boolean containFieldAPI(int level, String fieldSig) {
+		if (level == 20)
+			return true;
+		if (level2SdkAPIs.containsKey(level)) {
+			SdkAPIs sdkAPIs = level2SdkAPIs.get(level);
+			return sdkAPIs.containField(fieldSig);
+		}
+		return false;
 	}
 }

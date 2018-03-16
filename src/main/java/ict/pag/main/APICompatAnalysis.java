@@ -17,6 +17,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import heros.IFDSTabulationProblem;
+import heros.InterproceduralCFG;
 import ict.pag.core.FinderFact;
 import ict.pag.core.FinderProblem;
 import ict.pag.core.FinderSolver;
@@ -26,6 +27,7 @@ import ict.pag.global.ConcernUnits;
 import ict.pag.global.ConfigMgr;
 import ict.pag.utils.PagHelper;
 import soot.Body;
+import soot.G;
 import soot.Scene;
 import soot.SootClass;
 import soot.SootMethod;
@@ -54,11 +56,12 @@ public class APICompatAnalysis {
 	public APICompatAnalysis(String apkPath) {
 		String androidJarDir = ConfigMgr.v().getSdkDBDir();
 		app = new AndroidApplication(androidJarDir, apkPath);
+		logger.info("start APICompatAnalysis constructor for " + app.getAppName());
 		app.setConfig(config);
 		app.constructCallgraph();
 		icfg = new JimpleBasedInterproceduralCFG(config.getEnableExceptionTracking(), true);
 		sdkMgr = null;
-
+		logger.info("finish build call graph for " + app.getAppName());
 	}
 
 	public void setSdkMgr(SdkAPIMgr sdkMgr) {
@@ -67,12 +70,14 @@ public class APICompatAnalysis {
 
 	// need to know which stmt in which method, and api set which there are likely to be visit.
 	public void runAnalysis() {
+		logger.info("Start analysis " + app.getAppName() + "!");
 		Set<Unit> ifStmtSet = new HashSet<Unit>();
 		Set<Unit> apiSet = new HashSet<Unit>();
 		logger.info("Running pre-analysis...");
 		try {
 			preAnalysis(ifStmtSet, apiSet);
 		} catch (Exception e) {
+			System.err.println("fail to pre-analysis " + app.getAppName() + "!!!");
 			e.printStackTrace();
 		}
 
@@ -94,21 +99,23 @@ public class APICompatAnalysis {
 			Collection<Unit> startPoints = icfg.getStartPointsOf(sm);
 			for (Unit u : startPoints) {
 				((FinderProblem) finderProblem).addInitialSeeds(u, initialSeeds);
-				System.out.println("entry: " + u);
+				logger.info("entry: " + u);
 			}
 		}
 
 		logger.info("Running data flow analysis...");
 		FinderSolver finderSolver = new FinderSolver(finderProblem);
+		finderSolver.setEnableMergePointChecking(true);
 		finderSolver.solve();
-		logger.info("finishing analysis!");
 		System.out.println(ifStmtSet.size() + " vs " + apiSet.size());
 		logger.info("Checking API Use compatibility...");
 		try {
 			checkAPICompatibility();
 		} catch (Exception e) {
+			System.err.println("check API Compatibility in " + app.getAppName() + " failed!");
 			e.printStackTrace();
 		}
+		releaseCallgraph();
 		logger.info("finish analysis " + app.getAppName() + "!");
 	}
 
@@ -190,33 +197,12 @@ public class APICompatAnalysis {
 	 */
 	private void checkAPICompatibility() throws Exception {
 		Map<Unit, Set<Integer>> api2live = ConcernUnits.v().getApi2live();
-		String outDir = ConfigMgr.v().getOutputDir();
-		String reportFile = outDir + File.separator + app.getAppName() + ".report";
-		FileOutputStream fos = new FileOutputStream(reportFile);
-		BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(fos, "UTF-8"));
+		Set<String> bugReport = new HashSet<String>();
 		int minSdkVersion = app.getMinSdkVersion();
 		int maxSdkVersion = app.targetSdkVersion();
-		bw.write(app.getAppName() + " minSdkVersion: " + minSdkVersion + ", maxSdkVersion: " + maxSdkVersion);
-		bw.newLine();
-		bw.flush();
 		for (Entry<Unit, Set<Integer>> entry : api2live.entrySet()) {
 			Unit key = entry.getKey();
 			Set<Integer> liveLevels = entry.getValue();
-			// get calleeSig
-			String calleeSig = null;
-			if (key instanceof InvokeStmt) {
-				InvokeStmt ivk = (InvokeStmt) key;
-				InvokeExpr expr = ivk.getInvokeExpr();
-				calleeSig = expr.getMethod().getSignature();
-			} else if (key instanceof AssignStmt) {
-				Value right = ((AssignStmt) key).getRightOp();
-				assert right instanceof InvokeExpr;
-				InvokeExpr expr = (InvokeExpr) right;
-				calleeSig = expr.getMethod().getSignature();
-			} else {
-				logger.error("callsite other stmt: " + entry.getKey().getClass().toString());
-			}
-			assert calleeSig != null;
 			// filter api level;
 			for (Iterator<Integer> it = liveLevels.iterator(); it.hasNext();) {
 				int level = it.next();
@@ -224,24 +210,107 @@ public class APICompatAnalysis {
 					it.remove();
 				}
 			}
-			// check and report
-			if (liveLevels.size() == 0) {
-				bw.write(calleeSig + " not live in any API Level but be called in code!");
-				bw.newLine();
+			// get callee
+			SootMethod callee = null;
+			if (key instanceof InvokeStmt) {
+				InvokeStmt ivk = (InvokeStmt) key;
+				InvokeExpr expr = ivk.getInvokeExpr();
+				callee = expr.getMethod();
+				collectMethodAPIBug(key, callee, liveLevels, bugReport);
+			} else if (key instanceof AssignStmt) {
+				Value right = ((AssignStmt) key).getRightOp();
+				if (right instanceof InvokeExpr) {
+					InvokeExpr expr = (InvokeExpr) right;
+					callee = expr.getMethod();
+					collectMethodAPIBug(key, callee, liveLevels, bugReport);
+				} else if (right instanceof InstanceFieldRef) {
+					InstanceFieldRef ref = (InstanceFieldRef) right;
+					String fieldSig = ref.getField().getSignature();
+					collectFieldAPIBug(key, fieldSig, liveLevels, bugReport);
+				} else if (right instanceof StaticFieldRef) {
+					StaticFieldRef ref = (StaticFieldRef) right;
+					String fieldSig = ref.getField().getSignature();
+					collectFieldAPIBug(key, fieldSig, liveLevels, bugReport);
+				} else {
+					logger.error("should not collect " + key + " in pre-analysis phase: " + key.getClass());
+				}
+
 			} else {
-				Set<Integer> missing = new HashSet<Integer>();
-				for (Iterator<Integer> it = liveLevels.iterator(); it.hasNext();) {
-					int level = it.next();
-					if (!sdkMgr.containAPI(level, calleeSig)) {
-						missing.add(level);
-					}
-				}
-				if (missing.size() > 0) {
-					bw.write(calleeSig + " missing in " + missing);
-					bw.newLine();
-				}
+				logger.error("should not collect " + key + " in pre-analysis phase: " + key.getClass());
 			}
+		}
+		// report bugs
+		if (bugReport.size() == 0) {
+			logger.info("no potential bugs!");
+			return;
+		}
+		String outDir = ConfigMgr.v().getOutputDir();
+		String reportFile = outDir + File.separator + app.getAppName() + ".report";
+		FileOutputStream fos = new FileOutputStream(reportFile);
+		BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(fos, "UTF-8"));
+		bw.write(app.getAppName() + " minSdkVersion: " + minSdkVersion + ", maxSdkVersion: " + maxSdkVersion);
+		bw.newLine();
+		bw.flush();
+		for (Iterator<String> it = bugReport.iterator(); it.hasNext();) {
+			String bugMsg = it.next();
+			bw.write(bugMsg);
+			bw.newLine();
 		}
 		bw.close();
 	}
+
+	private void collectMethodAPIBug(Unit callSite, SootMethod callee, Set<Integer> liveLevels, Set<String> bugReport) {
+		SootMethod sm = icfg.getMethodOf(callSite);
+		int row = callSite.getJavaSourceStartLineNumber();
+		int col = callSite.getJavaSourceStartColumnNumber();
+		String calleeSig = callee.getSignature();
+		String callerSig = sm.getSignature();
+		if (liveLevels.size() == 0) {
+			bugReport.add(calleeSig + " not live in any API Level but called in " + callerSig + "at <" + row + ", "
+					+ col + ">.");
+		} else {
+			Set<Integer> missing = new HashSet<Integer>();
+			for (Iterator<Integer> it = liveLevels.iterator(); it.hasNext();) {
+				int level = it.next();
+				if (!sdkMgr.containMethodAPI(level, callee)) {
+					missing.add(level);
+				}
+			}
+			if (missing.size() > 0) {
+				bugReport.add(calleeSig + " called in " + callerSig + " at <" + row + ", " + col + "> " + " missing in "
+						+ missing);
+			}
+		}
+	}
+
+	private void collectFieldAPIBug(Unit unit, String fieldSig, Set<Integer> liveLevels, Set<String> bugReport) {
+		SootMethod sm = icfg.getMethodOf(unit);
+		String callerSig = sm.getSignature();
+		int row = unit.getJavaSourceStartLineNumber();
+		int col = unit.getJavaSourceStartColumnNumber();
+		if (liveLevels.size() == 0) {
+			bugReport.add(fieldSig + " not live in any API Level but called in " + callerSig + "at <" + row + ", " + col
+					+ ">.");
+		} else {
+			Set<Integer> missing = new HashSet<Integer>();
+			for (Iterator<Integer> it = liveLevels.iterator(); it.hasNext();) {
+				int level = it.next();
+				if (!sdkMgr.containFieldAPI(level, fieldSig)) {
+					missing.add(level);
+				}
+			}
+			if (missing.size() > 0) {
+				bugReport.add(fieldSig + " called in " + callerSig + " at <" + row + ", " + col + "> " + " missing in "
+						+ missing);
+			}
+		}
+	}
+
+	private void releaseCallgraph() {
+		Scene.v().releaseCallGraph();
+		Scene.v().releasePointsToAnalysis();
+		Scene.v().releaseReachableMethods();
+		G.v().resetSpark();
+	}
+
 }
