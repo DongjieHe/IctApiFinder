@@ -20,9 +20,11 @@ public class FinderProblem
 	protected final Map<Unit, Set<FinderFact>> initialSeeds = new HashMap<Unit, Set<FinderFact>>();
 	protected final Logger logger = LoggerFactory.getLogger(getClass());
 	private FinderFact zeroValue = null;
+	private int threadNums;
 
 	public FinderProblem(BiDiInterproceduralCFG<Unit, SootMethod> icfg) {
 		super(icfg);
+		threadNums = -1;
 	}
 
 	/**
@@ -102,11 +104,14 @@ public class FinderProblem
 	@Override
 	public int numThreads() {
 		// return super.numThreads();
-		return 1;
+		if (threadNums <= 0) {
+			return super.numThreads();
+		} else {
+			return threadNums;
+		}
 	}
 
 	public void setThreadsNum(int n) {
-		n = Math.max(1, n);
-
+		threadNums = Math.max(1, n);
 	}
 }
