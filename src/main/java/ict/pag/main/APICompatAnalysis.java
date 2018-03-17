@@ -17,7 +17,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import heros.IFDSTabulationProblem;
-import heros.InterproceduralCFG;
 import ict.pag.core.FinderFact;
 import ict.pag.core.FinderProblem;
 import ict.pag.core.FinderSolver;
@@ -54,13 +53,13 @@ public class APICompatAnalysis {
 	private SdkAPIMgr sdkMgr;
 
 	public APICompatAnalysis(String apkPath) {
+		config.setUseExistingSootInstance(false);
 		String androidJarDir = ConfigMgr.v().getSdkDBDir();
 		app = new AndroidApplication(androidJarDir, apkPath);
 		logger.info("start APICompatAnalysis constructor for " + app.getAppName());
 		app.setConfig(config);
-		app.constructCallgraph();
-		icfg = new JimpleBasedInterproceduralCFG(config.getEnableExceptionTracking(), true);
 		sdkMgr = null;
+		icfg = null;
 		logger.info("finish build call graph for " + app.getAppName());
 	}
 
@@ -86,6 +85,8 @@ public class APICompatAnalysis {
 		ConcernUnits.v().setApiSet(apiSet);
 
 		logger.info("Setting initial seeds...");
+		app.constructCallgraph();
+		icfg = new JimpleBasedInterproceduralCFG(config.getEnableExceptionTracking(), true);
 		IFDSTabulationProblem<Unit, FinderFact, SootMethod, BiDiInterproceduralCFG<Unit, SootMethod>> finderProblem = new FinderProblem(
 				icfg);
 		Set<FinderFact> initialSeeds = new HashSet<FinderFact>();
@@ -107,6 +108,8 @@ public class APICompatAnalysis {
 		FinderSolver finderSolver = new FinderSolver(finderProblem);
 		finderSolver.setEnableMergePointChecking(true);
 		finderSolver.solve();
+		finderSolver = null;
+		finderProblem = null;
 		System.out.println(ifStmtSet.size() + " vs " + apiSet.size());
 		logger.info("Checking API Use compatibility...");
 		try {
@@ -115,7 +118,6 @@ public class APICompatAnalysis {
 			System.err.println("check API Compatibility in " + app.getAppName() + " failed!");
 			e.printStackTrace();
 		}
-		releaseCallgraph();
 		logger.info("finish analysis " + app.getAppName() + "!");
 	}
 
@@ -260,10 +262,10 @@ public class APICompatAnalysis {
 	}
 
 	private void collectMethodAPIBug(Unit callSite, SootMethod callee, Set<Integer> liveLevels, Set<String> bugReport) {
-		SootMethod sm = icfg.getMethodOf(callSite);
 		int row = callSite.getJavaSourceStartLineNumber();
 		int col = callSite.getJavaSourceStartColumnNumber();
 		String calleeSig = callee.getSignature();
+		SootMethod sm = icfg.getMethodOf(callSite);
 		String callerSig = sm.getSignature();
 		if (liveLevels.size() == 0) {
 			bugReport.add(calleeSig + " not live in any API Level but called in " + callerSig + "at <" + row + ", "
@@ -306,7 +308,7 @@ public class APICompatAnalysis {
 		}
 	}
 
-	private void releaseCallgraph() {
+	public void releaseCallgraph() {
 		Scene.v().releaseCallGraph();
 		Scene.v().releasePointsToAnalysis();
 		Scene.v().releaseReachableMethods();

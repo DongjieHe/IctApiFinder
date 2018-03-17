@@ -28,6 +28,10 @@ eclipse {
     }
 }
 
+tasks.withType(JavaExec) {
+    enableAssertions = true
+}
+
 dependencies {
 	compile "ca.mcgill.sable:soot:3.0.0-SNAPSHOT"
     compile "ca.mcgill.sable:jasmin:2.5.0-SNAPSHOT"
@@ -44,6 +48,5 @@ task runMain(type: JavaExec) {
 	args = ["/home/hedj/Work/android/fdroidNewest/"]
 	// args = ["/home/hedj/app-debug.apk"]
 	// args = ["/home/hedj/Work/android/fdroidNewest/com.tmendes.birthdaydroid_12.apk"]
-	// args = ["/home/hedj/Work/android/fdroidNewest/fr.free.nrw.commons_82.apk"]
 }
 

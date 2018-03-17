@@ -25,6 +25,7 @@ public class Main {
 		if (file.isDirectory()) {
 			for (File inFile : file.listFiles()) {
 				String name = inFile.getName();
+				System.gc();
 				if (!name.endsWith(".apk")) {
 					System.err.println(name + " is not an apk file!");
 					continue;
@@ -32,7 +33,9 @@ public class Main {
 					APICompatAnalysis can = new APICompatAnalysis(inFile.getAbsolutePath());
 					can.setSdkMgr(sdkMgr);
 					can.runAnalysis();
+					can.releaseCallgraph();
 				}
+				System.gc();
 			}
 		} else {
 			if (!args[0].endsWith(".apk")) {
@@ -41,6 +44,7 @@ public class Main {
 				APICompatAnalysis can = new APICompatAnalysis(file.getAbsolutePath());
 				can.setSdkMgr(sdkMgr);
 				can.runAnalysis();
+				can.releaseCallgraph();
 			}
 		}
 		System.out.println("Analysis has run for " + (System.nanoTime() - beforeRun) / 1E9 + " seconds");
