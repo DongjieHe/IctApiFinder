@@ -29,6 +29,7 @@ import soot.Body;
 import soot.G;
 import soot.Scene;
 import soot.SootClass;
+import soot.SootField;
 import soot.SootMethod;
 import soot.Unit;
 import soot.Value;
@@ -56,11 +57,9 @@ public class APICompatAnalysis {
 		config.setUseExistingSootInstance(false);
 		String androidJarDir = ConfigMgr.v().getSdkDBDir();
 		app = new AndroidApplication(androidJarDir, apkPath);
-		logger.info("start APICompatAnalysis constructor for " + app.getAppName());
 		app.setConfig(config);
 		sdkMgr = null;
 		icfg = null;
-		logger.info("finish build call graph for " + app.getAppName());
 	}
 
 	public void setSdkMgr(SdkAPIMgr sdkMgr) {
@@ -70,6 +69,8 @@ public class APICompatAnalysis {
 	// need to know which stmt in which method, and api set which there are likely to be visit.
 	public void runAnalysis() {
 		logger.info("Start analysis " + app.getAppName() + "!");
+		app.constructCallgraph();
+		logger.info("finish build call graph for " + app.getAppName());
 		Set<Unit> ifStmtSet = new HashSet<Unit>();
 		Set<Unit> apiSet = new HashSet<Unit>();
 		logger.info("Running pre-analysis...");
@@ -85,7 +86,6 @@ public class APICompatAnalysis {
 		ConcernUnits.v().setApiSet(apiSet);
 
 		logger.info("Setting initial seeds...");
-		app.constructCallgraph();
 		icfg = new JimpleBasedInterproceduralCFG(config.getEnableExceptionTracking(), true);
 		IFDSTabulationProblem<Unit, FinderFact, SootMethod, BiDiInterproceduralCFG<Unit, SootMethod>> finderProblem = new FinderProblem(
 				icfg);
@@ -139,6 +139,8 @@ public class APICompatAnalysis {
 				}
 				sm.retrieveActiveBody();
 				Body body = sm.getActiveBody();
+				System.out.println(sm.getSignature());
+				System.out.println(body);
 				BriefUnitGraph noBug = new BriefUnitGraph(body);
 				SdkIntMustAliasAnalysis simaa = new SdkIntMustAliasAnalysis(noBug);
 				for (Unit u : body.getUnits()) {
@@ -218,20 +220,34 @@ public class APICompatAnalysis {
 				InvokeStmt ivk = (InvokeStmt) key;
 				InvokeExpr expr = ivk.getInvokeExpr();
 				callee = expr.getMethod();
+				if(callee.getDeclaringClass().isApplicationClass()) {
+					continue;
+				}
 				collectMethodAPIBug(key, callee, liveLevels, bugReport);
 			} else if (key instanceof AssignStmt) {
 				Value right = ((AssignStmt) key).getRightOp();
 				if (right instanceof InvokeExpr) {
 					InvokeExpr expr = (InvokeExpr) right;
 					callee = expr.getMethod();
+					if(callee.getDeclaringClass().isApplicationClass()) {
+						continue;
+					}
 					collectMethodAPIBug(key, callee, liveLevels, bugReport);
 				} else if (right instanceof InstanceFieldRef) {
 					InstanceFieldRef ref = (InstanceFieldRef) right;
-					String fieldSig = ref.getField().getSignature();
+					SootField sf = ref.getField();
+					if(sf.getDeclaringClass().isApplicationClass()) {
+						continue;
+					}
+					String fieldSig = sf.getSignature();
 					collectFieldAPIBug(key, fieldSig, liveLevels, bugReport);
 				} else if (right instanceof StaticFieldRef) {
 					StaticFieldRef ref = (StaticFieldRef) right;
-					String fieldSig = ref.getField().getSignature();
+					SootField sf = ref.getField();
+					if(sf.getDeclaringClass().isApplicationClass()) {
+						continue;
+					}
+					String fieldSig = sf.getSignature();
 					collectFieldAPIBug(key, fieldSig, liveLevels, bugReport);
 				} else {
 					logger.error("should not collect " + key + " in pre-analysis phase: " + key.getClass());
@@ -266,6 +282,8 @@ public class APICompatAnalysis {
 		int col = callSite.getJavaSourceStartColumnNumber();
 		String calleeSig = callee.getSignature();
 		SootMethod sm = icfg.getMethodOf(callSite);
+		boolean isApplication = sm.getDeclaringClass().isApplicationClass();
+		assert isApplication;
 		String callerSig = sm.getSignature();
 		if (liveLevels.size() == 0) {
 			bugReport.add(calleeSig + " not live in any API Level but called in " + callerSig + "at <" + row + ", "
@@ -287,6 +305,8 @@ public class APICompatAnalysis {
 
 	private void collectFieldAPIBug(Unit unit, String fieldSig, Set<Integer> liveLevels, Set<String> bugReport) {
 		SootMethod sm = icfg.getMethodOf(unit);
+		boolean isApplication = sm.getDeclaringClass().isApplicationClass();
+		assert isApplication;
 		String callerSig = sm.getSignature();
 		int row = unit.getJavaSourceStartLineNumber();
 		int col = unit.getJavaSourceStartColumnNumber();
