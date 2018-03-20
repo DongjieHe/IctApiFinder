@@ -51,6 +51,22 @@ public class SdkAPIMgr {
 		return apiSet.contains(sig);
 	}
 
+	public boolean containAPI(SootMethod sm) {
+		String sig = sm.getSignature();
+		if (apiSet.contains(sig)) {
+			return true;
+		}
+		SootClass decl = sm.getDeclaringClass();
+		while (decl.hasSuperclass()) {
+			decl = decl.getSuperclass();
+			sig = SootMethod.getSignature(decl, sm.getName(), sm.getParameterTypes(), sm.getReturnType());
+			if (apiSet.contains(sig)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	public boolean containAPI(int idx, String sig) {
 		// not check level 20;
 		if (idx == 20)
@@ -79,12 +95,13 @@ public class SdkAPIMgr {
 			if (sdkAPIs.containMethod(calleeSig)) {
 				return true;
 			} else {
-				SootClass declClazz = callee.getDeclaringClass();
-				String decl = declClazz.getName();
+				SootClass decl = callee.getDeclaringClass();
 				String desc = PagHelper.descriptor(callee);
-				String father = sdkAPIs.getFather(decl);
-				if (father != null && sdkAPIs.containAPI(father, desc)) {
-					return true;
+				while (decl.hasSuperclass()) {
+					decl = decl.getSuperclass();
+					if (sdkAPIs.containAPI(decl.getName(), desc)) {
+						return true;
+					}
 				}
 			}
 		}

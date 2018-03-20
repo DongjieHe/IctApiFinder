@@ -156,16 +156,14 @@ public class APICompatAnalysis {
 					// collect SDK API
 					boolean flag = false;
 					if (stmt instanceof InvokeStmt) {
-						InvokeExpr expr = stmt.getInvokeExpr();
+						InvokeExpr expr = ((InvokeStmt)stmt).getInvokeExpr();
 						SootMethod callee = expr.getMethod();
-						String calleeSig = callee.getSignature();
-						flag = sdkMgr.containAPI(calleeSig);
+						flag = sdkMgr.containAPI(callee);
 					} else if (stmt instanceof AssignStmt) {
 						Value right = ((AssignStmt) stmt).getRightOp();
 						if (right instanceof InvokeExpr) {
 							InvokeExpr expr = (InvokeExpr) right;
-							String calleeSig = expr.getMethod().getSignature();
-							flag = sdkMgr.containAPI(calleeSig);
+							flag = sdkMgr.containAPI(expr.getMethod());
 						} else if (right instanceof InstanceFieldRef) {
 							InstanceFieldRef ref = (InstanceFieldRef) right;
 							String fieldSig = ref.getField().getSignature();
@@ -214,12 +212,11 @@ public class APICompatAnalysis {
 					it.remove();
 				}
 			}
-			// get callee
-			SootMethod callee = null;
+
 			if (key instanceof InvokeStmt) {
 				InvokeStmt ivk = (InvokeStmt) key;
 				InvokeExpr expr = ivk.getInvokeExpr();
-				callee = expr.getMethod();
+				SootMethod callee = expr.getMethod();
 				if (callee.getDeclaringClass().isApplicationClass()) {
 					continue;
 				}
@@ -228,7 +225,7 @@ public class APICompatAnalysis {
 				Value right = ((AssignStmt) key).getRightOp();
 				if (right instanceof InvokeExpr) {
 					InvokeExpr expr = (InvokeExpr) right;
-					callee = expr.getMethod();
+					SootMethod callee = expr.getMethod();
 					if (callee.getDeclaringClass().isApplicationClass()) {
 						continue;
 					}
