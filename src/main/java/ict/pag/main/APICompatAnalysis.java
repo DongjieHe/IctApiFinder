@@ -47,13 +47,14 @@ import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
 import soot.toolkits.graph.BriefUnitGraph;
 
 public class APICompatAnalysis {
-	private static InfoflowAndroidConfiguration config = new InfoflowAndroidConfiguration();
+	private static InfoflowAndroidConfiguration config;
 	private final Logger logger = LoggerFactory.getLogger(getClass());
 	private AndroidApplication app;
 	private BiDiInterproceduralCFG<Unit, SootMethod> icfg;
 	private SdkAPIMgr sdkMgr;
 
 	public APICompatAnalysis(String apkPath) {
+		config = new InfoflowAndroidConfiguration();
 		config.setUseExistingSootInstance(false);
 		String androidJarDir = ConfigMgr.v().getSdkDBDir();
 		app = new AndroidApplication(androidJarDir, apkPath);
@@ -89,6 +90,7 @@ public class APICompatAnalysis {
 		icfg = new JimpleBasedInterproceduralCFG(config.getEnableExceptionTracking(), true);
 		IFDSTabulationProblem<Unit, FinderFact, SootMethod, BiDiInterproceduralCFG<Unit, SootMethod>> finderProblem = new FinderProblem(
 				icfg);
+		((FinderProblem) finderProblem).setThreadsNum(1);
 		Set<FinderFact> initialSeeds = new HashSet<FinderFact>();
 		for (int i = ConfigMgr.v().getMinSdkVersion(); i <= ConfigMgr.v().getMaxSdkVersion(); ++i) {
 			FinderFact finderFact = new FinderFact(i);
@@ -139,8 +141,6 @@ public class APICompatAnalysis {
 				}
 				sm.retrieveActiveBody();
 				Body body = sm.getActiveBody();
-				System.out.println(sm.getSignature());
-				System.out.println(body);
 				BriefUnitGraph noBug = new BriefUnitGraph(body);
 				SdkIntMustAliasAnalysis simaa = new SdkIntMustAliasAnalysis(noBug);
 				for (Unit u : body.getUnits()) {
@@ -201,7 +201,7 @@ public class APICompatAnalysis {
 	 */
 	private void checkAPICompatibility() throws Exception {
 		Map<Unit, Set<Integer>> api2live = ConcernUnits.v().getApi2live();
-		Set<String> bugReport = new HashSet<String>();
+		Set<BugUnit> bugReport = new HashSet<BugUnit>();
 		int minSdkVersion = app.getMinSdkVersion();
 		int maxSdkVersion = app.targetSdkVersion();
 		for (Entry<Unit, Set<Integer>> entry : api2live.entrySet()) {
@@ -220,7 +220,7 @@ public class APICompatAnalysis {
 				InvokeStmt ivk = (InvokeStmt) key;
 				InvokeExpr expr = ivk.getInvokeExpr();
 				callee = expr.getMethod();
-				if(callee.getDeclaringClass().isApplicationClass()) {
+				if (callee.getDeclaringClass().isApplicationClass()) {
 					continue;
 				}
 				collectMethodAPIBug(key, callee, liveLevels, bugReport);
@@ -229,14 +229,14 @@ public class APICompatAnalysis {
 				if (right instanceof InvokeExpr) {
 					InvokeExpr expr = (InvokeExpr) right;
 					callee = expr.getMethod();
-					if(callee.getDeclaringClass().isApplicationClass()) {
+					if (callee.getDeclaringClass().isApplicationClass()) {
 						continue;
 					}
 					collectMethodAPIBug(key, callee, liveLevels, bugReport);
 				} else if (right instanceof InstanceFieldRef) {
 					InstanceFieldRef ref = (InstanceFieldRef) right;
 					SootField sf = ref.getField();
-					if(sf.getDeclaringClass().isApplicationClass()) {
+					if (sf.getDeclaringClass().isApplicationClass()) {
 						continue;
 					}
 					String fieldSig = sf.getSignature();
@@ -244,7 +244,7 @@ public class APICompatAnalysis {
 				} else if (right instanceof StaticFieldRef) {
 					StaticFieldRef ref = (StaticFieldRef) right;
 					SootField sf = ref.getField();
-					if(sf.getDeclaringClass().isApplicationClass()) {
+					if (sf.getDeclaringClass().isApplicationClass()) {
 						continue;
 					}
 					String fieldSig = sf.getSignature();
@@ -269,15 +269,16 @@ public class APICompatAnalysis {
 		bw.write(app.getAppName() + " minSdkVersion: " + minSdkVersion + ", maxSdkVersion: " + maxSdkVersion);
 		bw.newLine();
 		bw.flush();
-		for (Iterator<String> it = bugReport.iterator(); it.hasNext();) {
-			String bugMsg = it.next();
-			bw.write(bugMsg);
+		for (Iterator<BugUnit> it = bugReport.iterator(); it.hasNext();) {
+			BugUnit bugMsg = it.next();
+			bw.write(bugMsg.toString());
 			bw.newLine();
 		}
 		bw.close();
 	}
 
-	private void collectMethodAPIBug(Unit callSite, SootMethod callee, Set<Integer> liveLevels, Set<String> bugReport) {
+	private void collectMethodAPIBug(Unit callSite, SootMethod callee, Set<Integer> liveLevels,
+			Set<BugUnit> bugReport) {
 		int row = callSite.getJavaSourceStartLineNumber();
 		int col = callSite.getJavaSourceStartColumnNumber();
 		String calleeSig = callee.getSignature();
@@ -285,9 +286,12 @@ public class APICompatAnalysis {
 		boolean isApplication = sm.getDeclaringClass().isApplicationClass();
 		assert isApplication;
 		String callerSig = sm.getSignature();
+		PathTracer tracer = new PathTracer(icfg, callSite);
+		tracer.trace();
 		if (liveLevels.size() == 0) {
-			bugReport.add(calleeSig + " not live in any API Level but called in " + callerSig + "at <" + row + ", "
-					+ col + ">.");
+			String bugMsg = calleeSig + " called in " + callerSig + "<" + row + ", " + col + "> no living Level";
+			BugUnit bug = new BugUnit(bugMsg, tracer.getCallStackPath());
+			bugReport.add(bug);
 		} else {
 			Set<Integer> missing = new HashSet<Integer>();
 			for (Iterator<Integer> it = liveLevels.iterator(); it.hasNext();) {
@@ -297,22 +301,27 @@ public class APICompatAnalysis {
 				}
 			}
 			if (missing.size() > 0) {
-				bugReport.add(calleeSig + " called in " + callerSig + " at <" + row + ", " + col + "> " + " missing in "
-						+ missing);
+				String bugMsg = calleeSig + " called in " + callerSig + "<" + row + ", " + col + "> " + " not in "
+						+ missing;
+				BugUnit bug = new BugUnit(bugMsg, tracer.getCallStackPath());
+				bugReport.add(bug);
 			}
 		}
 	}
 
-	private void collectFieldAPIBug(Unit unit, String fieldSig, Set<Integer> liveLevels, Set<String> bugReport) {
+	private void collectFieldAPIBug(Unit unit, String fieldSig, Set<Integer> liveLevels, Set<BugUnit> bugReport) {
 		SootMethod sm = icfg.getMethodOf(unit);
 		boolean isApplication = sm.getDeclaringClass().isApplicationClass();
 		assert isApplication;
 		String callerSig = sm.getSignature();
 		int row = unit.getJavaSourceStartLineNumber();
 		int col = unit.getJavaSourceStartColumnNumber();
+		PathTracer tracer = new PathTracer(icfg, unit);
+		tracer.trace();
 		if (liveLevels.size() == 0) {
-			bugReport.add(fieldSig + " not live in any API Level but called in " + callerSig + "at <" + row + ", " + col
-					+ ">.");
+			String bugMsg = fieldSig + " called in " + callerSig + "<" + row + ", " + col + "> no living Level";
+			BugUnit bug = new BugUnit(bugMsg, tracer.getCallStackPath());
+			bugReport.add(bug);
 		} else {
 			Set<Integer> missing = new HashSet<Integer>();
 			for (Iterator<Integer> it = liveLevels.iterator(); it.hasNext();) {
@@ -322,9 +331,12 @@ public class APICompatAnalysis {
 				}
 			}
 			if (missing.size() > 0) {
-				bugReport.add(fieldSig + " called in " + callerSig + " at <" + row + ", " + col + "> " + " missing in "
-						+ missing);
+				String bugMsg = fieldSig + " called in " + callerSig + "<" + row + ", " + col + "> " + " not in "
+						+ missing;
+				BugUnit bug = new BugUnit(bugMsg, tracer.getCallStackPath());
+				bugReport.add(bug);
 			}
+
 		}
 	}
 

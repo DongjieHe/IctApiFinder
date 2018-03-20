@@ -41,6 +41,7 @@ public class PathTracer {
 			if (entrySet.contains(caller)) {
 				// find one path
 				mPath = new ArrayList<SootMethod>();
+				mPath.add(top);
 				while (!stack.isEmpty()) {
 					mPath.add(stack.pop());
 				}
@@ -64,16 +65,5 @@ public class PathTracer {
 
 	public List<SootMethod> getCallStackPath() {
 		return mPath;
-	}
-
-	public void dump() {
-		if (mPath == null) {
-			System.out.println("no path can reach " + mUnit + " in " + currMethod.getSignature());
-		} else {
-			System.out.println("the reachable path to " + mUnit + ":");
-			for (SootMethod sm : mPath) {
-				System.out.println("\t-->" + sm.getSignature());
-			}
-		}
 	}
 }

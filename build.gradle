@@ -42,12 +42,20 @@ dependencies {
 	compile group: 'commons-io', name: 'commons-io', version: '2.6'
 }
 
+mainClassName = "ict.pag.main.Main"
+
+run {
+    if (project.hasProperty('args')) {
+        args project.property('args').split()
+    }
+}
+
 task runMain(type: JavaExec) {
 	main = "ict.pag.main.Main"
 	classpath = sourceSets.main.runtimeClasspath
-	// args = ["/home/hedj/Work/android/fdroidNewest/"]
-	args = ["/home/hedj/app-debug.apk"]
-	// args = ["/home/hedj/Work/android/fdroidNewest/fr.free.nrw.commons_82.apk"]
+	// args = ["/home/hedj/Desktop/tmpx"]
+	// args = ["/home/hedj/app-debug.apk"]
+	args = ["/home/hedj/Work/android/fdroidNewest/fr.free.nrw.commons_82.apk"]
 	// args = ["/home/hedj/Work/android/fdroidNewest/com.tmendes.birthdaydroid_12.apk"]
 }
 
