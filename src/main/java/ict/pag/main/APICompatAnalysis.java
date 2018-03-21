@@ -110,8 +110,6 @@ public class APICompatAnalysis {
 		FinderSolver finderSolver = new FinderSolver(finderProblem);
 		finderSolver.setEnableMergePointChecking(true);
 		finderSolver.solve();
-		finderSolver = null;
-		finderProblem = null;
 		System.out.println(ifStmtSet.size() + " vs " + apiSet.size());
 		logger.info("Checking API Use compatibility...");
 		try {
@@ -121,6 +119,8 @@ public class APICompatAnalysis {
 			e.printStackTrace();
 		}
 		logger.info("finish analysis " + app.getAppName() + "!");
+		finderSolver = null;
+		finderProblem = null;
 	}
 
 	/**
@@ -287,7 +287,7 @@ public class APICompatAnalysis {
 		tracer.trace();
 		if (liveLevels.size() == 0) {
 			String bugMsg = calleeSig + " called in " + callerSig + "<" + row + ", " + col + "> no living Level";
-			BugUnit bug = new BugUnit(bugMsg, tracer.getCallStackPath());
+			BugUnit bug = new BugUnit(bugMsg, tracer.getCallStack());
 			bugReport.add(bug);
 		} else {
 			Set<Integer> missing = new HashSet<Integer>();
@@ -300,7 +300,7 @@ public class APICompatAnalysis {
 			if (missing.size() > 0) {
 				String bugMsg = calleeSig + " called in " + callerSig + "<" + row + ", " + col + "> " + " not in "
 						+ missing;
-				BugUnit bug = new BugUnit(bugMsg, tracer.getCallStackPath());
+				BugUnit bug = new BugUnit(bugMsg, tracer.getCallStack());
 				bugReport.add(bug);
 			}
 		}
@@ -317,7 +317,7 @@ public class APICompatAnalysis {
 		tracer.trace();
 		if (liveLevels.size() == 0) {
 			String bugMsg = fieldSig + " called in " + callerSig + "<" + row + ", " + col + "> no living Level";
-			BugUnit bug = new BugUnit(bugMsg, tracer.getCallStackPath());
+			BugUnit bug = new BugUnit(bugMsg, tracer.getCallStack());
 			bugReport.add(bug);
 		} else {
 			Set<Integer> missing = new HashSet<Integer>();
@@ -330,7 +330,7 @@ public class APICompatAnalysis {
 			if (missing.size() > 0) {
 				String bugMsg = fieldSig + " called in " + callerSig + "<" + row + ", " + col + "> " + " not in "
 						+ missing;
-				BugUnit bug = new BugUnit(bugMsg, tracer.getCallStackPath());
+				BugUnit bug = new BugUnit(bugMsg, tracer.getCallStack());
 				bugReport.add(bug);
 			}
 

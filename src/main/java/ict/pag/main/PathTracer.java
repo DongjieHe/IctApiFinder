@@ -15,42 +15,45 @@ import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 public class PathTracer {
 	private BiDiInterproceduralCFG<Unit, SootMethod> icfg;
 	private SootMethod currMethod;
-	private List<SootMethod> mPath;
+	private Stack<SootMethod> callStack;
 	private Unit mUnit;
 
 	public PathTracer(BiDiInterproceduralCFG<Unit, SootMethod> cfg, Unit unit) {
 		icfg = cfg;
 		currMethod = icfg.getMethodOf(unit);
 		mUnit = unit;
-		mPath = null;
+		callStack = null;
 	}
 
 	private void traceHelper(Stack<SootMethod> stack, Set<SootMethod> visit, Set<SootMethod> entrySet) {
 		if (stack.isEmpty()) {
 			return;
 		}
-		SootMethod top = stack.pop();
+		SootMethod top = stack.peek();
+		if (entrySet.contains(top)) {
+			// find one path
+			callStack = new Stack<SootMethod>();
+			while (!stack.isEmpty()) {
+				callStack.push(stack.pop());
+			}
+			return;
+		}
 		visit.add(top);
 		Collection<Unit> callerUnits = icfg.getCallersOf(top);
 		for (Unit unit : callerUnits) {
+			if(!icfg.isReachable(unit)) {
+				continue;
+			}
 			SootMethod caller = icfg.getMethodOf(unit);
 			if (visit.contains(caller)) {
 				continue;
 			}
 			stack.push(caller);
-			if (entrySet.contains(caller)) {
-				// find one path
-				mPath = new ArrayList<SootMethod>();
-				mPath.add(top);
-				while (!stack.isEmpty()) {
-					mPath.add(stack.pop());
-				}
-				return;
-			}
 			traceHelper(stack, visit, entrySet);
 			if (stack.isEmpty()) {
 				return;
 			}
+			stack.pop();
 		}
 	}
 
@@ -63,7 +66,7 @@ public class PathTracer {
 		traceHelper(stack, visit, entrySet);
 	}
 
-	public List<SootMethod> getCallStackPath() {
-		return mPath;
+	public Stack<SootMethod> getCallStack() {
+		return callStack;
 	}
 }

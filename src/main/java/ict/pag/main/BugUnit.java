@@ -1,23 +1,24 @@
 package ict.pag.main;
 
-import java.util.List;
+import java.util.Stack;
 
 import soot.SootMethod;
 
 public class BugUnit {
 	private String bugMsg;
-	private List<SootMethod> tracePath;
+	private Stack<SootMethod> mCallStack;
 
-	public BugUnit(String msg, List<SootMethod> path) {
+	public BugUnit(String msg, Stack<SootMethod> st) {
 		bugMsg = msg;
-		tracePath = path;
+		mCallStack = st;
 	}
 
 	@Override
 	public String toString() {
 		String retStr = "BUG: " + bugMsg + "\n";
 		retStr += "reachable path:\n";
-		for (SootMethod sm : tracePath) {
+		while(!mCallStack.isEmpty()) {
+			SootMethod sm = mCallStack.pop();
 			retStr += "\t-->" + sm.getSignature() + "\n";
 		}
 		return retStr;
