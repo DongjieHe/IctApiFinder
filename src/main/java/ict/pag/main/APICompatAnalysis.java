@@ -68,7 +68,7 @@ public class APICompatAnalysis {
 	}
 
 	// need to know which stmt in which method, and api set which there are likely to be visit.
-	public void runAnalysis() {
+	public void runAnalysis(boolean fullDetail) {
 		logger.info("Start analysis " + app.getAppName() + "!");
 		app.constructCallgraph();
 		logger.info("finish build call graph for " + app.getAppName());
@@ -113,7 +113,7 @@ public class APICompatAnalysis {
 		System.out.println(ifStmtSet.size() + " vs " + apiSet.size());
 		logger.info("Checking API Use compatibility...");
 		try {
-			checkAPICompatibility();
+			checkAPICompatibility(fullDetail);
 		} catch (Exception e) {
 			System.err.println("check API Compatibility in " + app.getAppName() + " failed!");
 			e.printStackTrace();
@@ -156,7 +156,7 @@ public class APICompatAnalysis {
 					// collect SDK API
 					boolean flag = false;
 					if (stmt instanceof InvokeStmt) {
-						InvokeExpr expr = ((InvokeStmt)stmt).getInvokeExpr();
+						InvokeExpr expr = ((InvokeStmt) stmt).getInvokeExpr();
 						SootMethod callee = expr.getMethod();
 						flag = sdkMgr.containAPI(callee);
 					} else if (stmt instanceof AssignStmt) {
@@ -197,7 +197,7 @@ public class APICompatAnalysis {
 	/**
 	 * Check whether this app contain API incompatibility problem.
 	 */
-	private void checkAPICompatibility() throws Exception {
+	private void checkAPICompatibility(boolean fullDetail) throws Exception {
 		Map<Unit, Set<Integer>> api2live = ConcernUnits.v().getApi2live();
 		Set<BugUnit> bugReport = new HashSet<BugUnit>();
 		int minSdkVersion = app.getMinSdkVersion();
@@ -268,7 +268,7 @@ public class APICompatAnalysis {
 		bw.flush();
 		for (Iterator<BugUnit> it = bugReport.iterator(); it.hasNext();) {
 			BugUnit bugMsg = it.next();
-			bw.write(bugMsg.toString());
+			bw.write(bugMsg.toString(fullDetail));
 			bw.newLine();
 		}
 		bw.close();
@@ -287,7 +287,7 @@ public class APICompatAnalysis {
 		tracer.trace();
 		if (liveLevels.size() == 0) {
 			String bugMsg = calleeSig + " called in " + callerSig + "<" + row + ", " + col + "> no living Level";
-			BugUnit bug = new BugUnit(bugMsg, tracer.getCallStack());
+			BugUnit bug = new BugUnit(bugMsg, tracer.getAllPossibleCallStack());
 			bugReport.add(bug);
 		} else {
 			Set<Integer> missing = new HashSet<Integer>();
@@ -300,7 +300,7 @@ public class APICompatAnalysis {
 			if (missing.size() > 0) {
 				String bugMsg = calleeSig + " called in " + callerSig + "<" + row + ", " + col + "> " + " not in "
 						+ missing;
-				BugUnit bug = new BugUnit(bugMsg, tracer.getCallStack());
+				BugUnit bug = new BugUnit(bugMsg, tracer.getAllPossibleCallStack());
 				bugReport.add(bug);
 			}
 		}
@@ -317,7 +317,7 @@ public class APICompatAnalysis {
 		tracer.trace();
 		if (liveLevels.size() == 0) {
 			String bugMsg = fieldSig + " called in " + callerSig + "<" + row + ", " + col + "> no living Level";
-			BugUnit bug = new BugUnit(bugMsg, tracer.getCallStack());
+			BugUnit bug = new BugUnit(bugMsg, tracer.getAllPossibleCallStack());
 			bugReport.add(bug);
 		} else {
 			Set<Integer> missing = new HashSet<Integer>();
@@ -330,7 +330,7 @@ public class APICompatAnalysis {
 			if (missing.size() > 0) {
 				String bugMsg = fieldSig + " called in " + callerSig + "<" + row + ", " + col + "> " + " not in "
 						+ missing;
-				BugUnit bug = new BugUnit(bugMsg, tracer.getCallStack());
+				BugUnit bug = new BugUnit(bugMsg, tracer.getAllPossibleCallStack());
 				bugReport.add(bug);
 			}
 

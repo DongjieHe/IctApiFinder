@@ -32,7 +32,7 @@ public class Main {
 				} else {
 					APICompatAnalysis can = new APICompatAnalysis(inFile.getAbsolutePath());
 					can.setSdkMgr(sdkMgr);
-					can.runAnalysis();
+					can.runAnalysis(false);
 					can.releaseCallgraph();
 				}
 				System.gc();
@@ -43,7 +43,7 @@ public class Main {
 			} else {
 				APICompatAnalysis can = new APICompatAnalysis(file.getAbsolutePath());
 				can.setSdkMgr(sdkMgr);
-				can.runAnalysis();
+				can.runAnalysis(true);
 				can.releaseCallgraph();
 			}
 		}
