@@ -56,6 +56,6 @@ task runMain(type: JavaExec) {
 	// args = ["/home/hedj/Desktop/tmpx"]
 	// args = ["/home/hedj/app-debug.apk"]
 	// args = ["/home/hedj/Work/android/fdroidNewest/fr.free.nrw.commons_82.apk"]
-	args = ["/home/hedj/Desktop/tmpx/eu.kanade.tachiyomi_31.apk"]
+    args = ["/home/hedj/Desktop/app-debug.apk"]
 }
 

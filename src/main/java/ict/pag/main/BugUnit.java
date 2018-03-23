@@ -8,10 +8,16 @@ import soot.SootMethod;
 public class BugUnit {
 	private String bugMsg;
 	private List<List<SootMethod>> mPossibleCallStack;
+	private int bugType;
 
-	public BugUnit(String msg, List<List<SootMethod>> st) {
+	public BugUnit(String msg, List<List<SootMethod>> st, int tp) {
 		bugMsg = msg;
 		mPossibleCallStack = st;
+		bugType = tp;
+	}
+
+	public int getBugType() {
+		return bugType;
 	}
 
 	@Override

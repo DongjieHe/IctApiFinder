@@ -72,18 +72,17 @@ public class APICompatAnalysis {
 		logger.info("Start analysis " + app.getAppName() + "!");
 		app.constructCallgraph();
 		logger.info("finish build call graph for " + app.getAppName());
-		Set<Unit> ifStmtSet = new HashSet<Unit>();
+		Map<Unit, Set<Integer>> ifStmt2Killing = new HashMap<Unit, Set<Integer>>();
 		Set<Unit> apiSet = new HashSet<Unit>();
 		logger.info("Running pre-analysis...");
 		try {
-			preAnalysis(ifStmtSet, apiSet);
+			preAnalysis(ifStmt2Killing, apiSet);
 		} catch (Exception e) {
 			System.err.println("fail to pre-analysis " + app.getAppName() + "!!!");
 			e.printStackTrace();
 		}
 
-		Map<Unit, Set<Integer>> retMap = createUnitToKillingMap(ifStmtSet);
-		ConcernUnits.v().setUnitToKillMap(retMap);
+		ConcernUnits.v().setUnitToKillMap(ifStmt2Killing);
 		ConcernUnits.v().setApiSet(apiSet);
 
 		logger.info("Setting initial seeds...");
@@ -110,7 +109,7 @@ public class APICompatAnalysis {
 		FinderSolver finderSolver = new FinderSolver(finderProblem);
 		finderSolver.setEnableMergePointChecking(true);
 		finderSolver.solve();
-		System.out.println(ifStmtSet.size() + " vs " + apiSet.size());
+		System.out.println(ifStmt2Killing.size() + " vs " + apiSet.size());
 		logger.info("Checking API Use compatibility...");
 		try {
 			checkAPICompatibility(fullDetail);
@@ -132,7 +131,7 @@ public class APICompatAnalysis {
 	 *            all stmt that use an API from SDK.
 	 * @throws Exception
 	 */
-	private void preAnalysis(Set<Unit> ifStmtSet, Set<Unit> apiSet) throws Exception {
+	private void preAnalysis(Map<Unit, Set<Integer>> ifStmt2Killing, Set<Unit> apiSet) throws Exception {
 		for (SootClass sc : Scene.v().getApplicationClasses()) {
 			List<SootMethod> sms = sc.getMethods();
 			for (SootMethod sm : sms) {
@@ -150,7 +149,8 @@ public class APICompatAnalysis {
 						HashSet<Value> flowBefore = simaa.getFlowBefore(u);
 						JIfStmt is = (JIfStmt) stmt;
 						if (PagHelper.isConcernIfStmt(is, flowBefore)) {
-							ifStmtSet.add(u);
+							Set<Integer> killSet = PagHelper.fetchKillingSet((IfStmt) u);
+							ifStmt2Killing.put(u, killSet);
 						}
 					}
 					// collect SDK API
@@ -181,17 +181,6 @@ public class APICompatAnalysis {
 				} // for unit
 			} // for method
 		} // for class
-	}
-
-	private Map<Unit, Set<Integer>> createUnitToKillingMap(Set<Unit> ifStmtSet) {
-		Map<Unit, Set<Integer>> retMap = new HashMap<Unit, Set<Integer>>();
-		for (Iterator<Unit> it = ifStmtSet.iterator(); it.hasNext();) {
-			Unit u = it.next();
-			Set<Integer> killSet = PagHelper.fetchKillingSet((IfStmt) u);
-			retMap.put(u, killSet);
-			logger.info("ifstmt: " + u + "-->" + killSet);
-		}
-		return retMap;
 	}
 
 	/**
@@ -268,6 +257,9 @@ public class APICompatAnalysis {
 		bw.flush();
 		for (Iterator<BugUnit> it = bugReport.iterator(); it.hasNext();) {
 			BugUnit bugMsg = it.next();
+			if(fullDetail && bugMsg.getBugType() == 0) {
+				continue;
+			}
 			bw.write(bugMsg.toString(fullDetail));
 			bw.newLine();
 		}
@@ -287,7 +279,7 @@ public class APICompatAnalysis {
 		tracer.trace();
 		if (liveLevels.size() == 0) {
 			String bugMsg = calleeSig + " called in " + callerSig + "<" + row + ", " + col + "> no living Level";
-			BugUnit bug = new BugUnit(bugMsg, tracer.getAllPossibleCallStack());
+			BugUnit bug = new BugUnit(bugMsg, tracer.getAllPossibleCallStack(), 0);
 			bugReport.add(bug);
 		} else {
 			Set<Integer> missing = new HashSet<Integer>();
@@ -300,7 +292,7 @@ public class APICompatAnalysis {
 			if (missing.size() > 0) {
 				String bugMsg = calleeSig + " called in " + callerSig + "<" + row + ", " + col + "> " + " not in "
 						+ missing;
-				BugUnit bug = new BugUnit(bugMsg, tracer.getAllPossibleCallStack());
+				BugUnit bug = new BugUnit(bugMsg, tracer.getAllPossibleCallStack(), 1);
 				bugReport.add(bug);
 			}
 		}
@@ -317,7 +309,7 @@ public class APICompatAnalysis {
 		tracer.trace();
 		if (liveLevels.size() == 0) {
 			String bugMsg = fieldSig + " called in " + callerSig + "<" + row + ", " + col + "> no living Level";
-			BugUnit bug = new BugUnit(bugMsg, tracer.getAllPossibleCallStack());
+			BugUnit bug = new BugUnit(bugMsg, tracer.getAllPossibleCallStack(), 0);
 			bugReport.add(bug);
 		} else {
 			Set<Integer> missing = new HashSet<Integer>();
@@ -330,7 +322,7 @@ public class APICompatAnalysis {
 			if (missing.size() > 0) {
 				String bugMsg = fieldSig + " called in " + callerSig + "<" + row + ", " + col + "> " + " not in "
 						+ missing;
-				BugUnit bug = new BugUnit(bugMsg, tracer.getAllPossibleCallStack());
+				BugUnit bug = new BugUnit(bugMsg, tracer.getAllPossibleCallStack(), 1);
 				bugReport.add(bug);
 			}
 
