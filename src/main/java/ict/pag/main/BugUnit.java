@@ -1,7 +1,6 @@
 package ict.pag.main;
 
 import java.util.List;
-import java.util.Stack;
 
 import soot.SootMethod;
 

@@ -26,24 +26,30 @@ import ict.pag.global.ConcernUnits;
 import ict.pag.global.ConfigMgr;
 import ict.pag.utils.PagHelper;
 import soot.Body;
+import soot.BooleanType;
 import soot.G;
 import soot.Scene;
 import soot.SootClass;
 import soot.SootField;
 import soot.SootMethod;
+import soot.Type;
 import soot.Unit;
 import soot.Value;
 import soot.jimple.AssignStmt;
-import soot.jimple.IfStmt;
 import soot.jimple.InstanceFieldRef;
+import soot.jimple.IntConstant;
 import soot.jimple.InvokeExpr;
 import soot.jimple.InvokeStmt;
 import soot.jimple.StaticFieldRef;
 import soot.jimple.Stmt;
 import soot.jimple.infoflow.android.InfoflowAndroidConfiguration;
+import soot.jimple.internal.JEqExpr;
 import soot.jimple.internal.JIfStmt;
+import soot.jimple.internal.JReturnStmt;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
+import soot.toolkits.graph.Block;
+import soot.toolkits.graph.BriefBlockGraph;
 import soot.toolkits.graph.BriefUnitGraph;
 
 public class APICompatAnalysis {
@@ -132,6 +138,8 @@ public class APICompatAnalysis {
 	 * @throws Exception
 	 */
 	private void preAnalysis(Map<Unit, Set<Integer>> ifStmt2Killing, Set<Unit> apiSet) throws Exception {
+		Map<Unit, Set<Integer>> bool2killing = new HashMap<Unit, Set<Integer>>();
+		Map<SootMethod, Set<Integer>> sm2killing = new HashMap<SootMethod, Set<Integer>>();
 		for (SootClass sc : Scene.v().getApplicationClasses()) {
 			List<SootMethod> sms = sc.getMethods();
 			for (SootMethod sm : sms) {
@@ -142,14 +150,16 @@ public class APICompatAnalysis {
 				Body body = sm.getActiveBody();
 				BriefUnitGraph noBug = new BriefUnitGraph(body);
 				SdkIntMustAliasAnalysis simaa = new SdkIntMustAliasAnalysis(noBug);
+
 				for (Unit u : body.getUnits()) {
 					Stmt stmt = (Stmt) u;
+					HashSet<Value> flowBefore = simaa.getFlowBefore(u);
 					// collect concern ifStmt.
 					if (stmt instanceof JIfStmt) {
-						HashSet<Value> flowBefore = simaa.getFlowBefore(u);
 						JIfStmt is = (JIfStmt) stmt;
-						if (PagHelper.isConcernIfStmt(is, flowBefore)) {
-							Set<Integer> killSet = PagHelper.fetchKillingSet((IfStmt) u);
+						Value cond = is.getCondition();
+						if (PagHelper.isConcernExpr(cond, flowBefore)) {
+							Set<Integer> killSet = PagHelper.fetchKillingSet(cond);
 							ifStmt2Killing.put(u, killSet);
 						}
 					}
@@ -173,14 +183,152 @@ public class APICompatAnalysis {
 							String fieldSig = ref.getField().getSignature();
 							flag = sdkMgr.containAPI(fieldSig);
 						}
+
+						// collect concern bool expr;
+						if (PagHelper.isConcernExpr(right, flowBefore)) {
+							bool2killing.put(u, PagHelper.fetchKillingSet(right));
+						}
 					}
 					if (flag) {
 						apiSet.add(u);
 					}
 
 				} // for unit
+					// collect boolean {return SDK_INT op CNT;} methods.
+				BriefBlockGraph bg = new BriefBlockGraph(body);
+				// DotGraph dg = (new CFGToDotGraph()).drawCFG(bg, body);
+				// dg.plot(sm.getSignature() + ".dot");
+				updateIfConcernReturnMethod(bg, ifStmt2Killing, sm2killing);
 			} // for method
 		} // for class
+
+		/**
+		 * the second time to traverse the whole apk classes. mainly collect IfStmt that with condition expr of concern
+		 * boolean or returnMethod.
+		 */
+		Map<SootMethod, Set<Value>> sm2vs = new HashMap<SootMethod, Set<Value>>();
+		for (SootClass sc : Scene.v().getApplicationClasses()) {
+			List<SootMethod> sms = sc.getMethods();
+			for (SootMethod sm : sms) {
+				if (!sm.isConcrete()) {
+					continue;
+				}
+				sm.retrieveActiveBody();
+				Body body = sm.getActiveBody();
+				for (Unit u : body.getUnits()) {
+					Stmt stmt = (Stmt) u;
+					if (stmt instanceof AssignStmt) {
+						Value left = ((AssignStmt) stmt).getLeftOp();
+						Value right = ((AssignStmt) stmt).getRightOp();
+						if (right instanceof InvokeExpr) {
+							InvokeExpr expr = (InvokeExpr) right;
+							SootMethod callee = expr.getMethod();
+							if (sm2killing.containsKey(callee)) {
+								if (sm2vs.containsKey(callee)) {
+									sm2vs.get(callee).add(left);
+								} else {
+									Set<Value> tmp = new HashSet<Value>();
+									tmp.add(left);
+									sm2vs.put(callee, tmp);
+								}
+							}
+						}
+					}
+					// collect concern ifStmt.
+					if (stmt instanceof JIfStmt) {
+						JIfStmt is = (JIfStmt) stmt;
+						Value cond = is.getCondition();
+						if (cond instanceof JEqExpr) {
+							JEqExpr eqExpr = (JEqExpr) cond;
+							Value op1 = eqExpr.getOp1();
+							Value op2 = eqExpr.getOp2();
+							if (op1 instanceof IntConstant) {
+								Value tmp = op1;
+								op1 = op2;
+								op2 = tmp;
+							}
+							// Map<SootMethod, Set<Value>> sm2vs;
+							for (Entry<SootMethod, Set<Value>> entry : sm2vs.entrySet()) {
+								if (entry.getValue().contains(op1)) {
+									Set<Integer> kSet = sm2killing.get(entry.getKey());
+									Set<Integer> finalSet;
+									if (((IntConstant) op2).value == 1) {
+										finalSet = kSet;
+									} else {
+										int mMinVersion = ConfigMgr.v().getMinSdkVersion();
+										int mMaxVersion = ConfigMgr.v().getMaxSdkVersion();
+										finalSet = new HashSet<Integer>();
+										for (int i = mMinVersion; i <= mMaxVersion; ++i) {
+											if (!kSet.contains(i)) {
+												finalSet.add(i);
+											}
+										}
+									}
+									ifStmt2Killing.put(u, finalSet);
+								}
+							}
+						}
+						// if(bool2killing.containsKey(cond)) {
+						// Set<Integer> killSet = bool2killing.get(cond);
+						// ifStmt2Killing.put(u, killSet);
+						// }
+					}
+				} // for unit
+			} // for method
+		} // for class
+	}
+
+	/**
+	 * check whether is our concern return method.
+	 */
+	private boolean updateIfConcernReturnMethod(BriefBlockGraph bg, Map<Unit, Set<Integer>> if2kill,
+			Map<SootMethod, Set<Integer>> sm2killing) {
+		SootMethod sm = bg.getBody().getMethod();
+		Type mType = sm.getReturnType();
+		boolean flag = mType instanceof BooleanType;
+		flag &= bg.getBlocks().size() == 3;
+		flag &= bg.getHeads().size() == 1;
+		if (flag == false) {
+			return false;
+		}
+		Block head = bg.getHeads().get(0);
+		Unit tail = head.getTail();
+		List<Block> succBlks = head.getSuccs();
+		if (succBlks.size() != 2 || !if2kill.containsKey(tail)) {
+			return false;
+		}
+
+		JIfStmt is = (JIfStmt) tail;
+		Stmt tgt = is.getTarget();
+		Unit succTail1 = succBlks.get(0).getTail();
+		Unit succTail2 = succBlks.get(1).getTail();
+		if (!(succTail1 instanceof JReturnStmt) || !(succTail2 instanceof JReturnStmt)) {
+			return false;
+		}
+		JReturnStmt jrStmt1 = (JReturnStmt) succTail1;
+		JReturnStmt jrStmt2 = (JReturnStmt) succTail2;
+		Value op1 = jrStmt1.getOp();
+		Value op2 = jrStmt2.getOp();
+		if (!(op1 instanceof IntConstant) || !(op2 instanceof IntConstant)) {
+			return false;
+		}
+		IntConstant ic1 = (IntConstant) op1;
+		IntConstant ic2 = (IntConstant) op2;
+		Set<Integer> killing = PagHelper.fetchKillingSet(is.getCondition());
+		if (tgt == succTail1 && ic1.value == 1 || tgt == succTail1 && ic2.value == 0) {
+			sm2killing.put(sm, killing);
+		} else {
+			int mMinVersion = ConfigMgr.v().getMinSdkVersion();
+			int mMaxVersion = ConfigMgr.v().getMaxSdkVersion();
+			Set<Integer> mKilling = new HashSet<Integer>();
+			for (int i = mMinVersion; i <= mMaxVersion; ++i) {
+				if (!killing.contains(i)) {
+					mKilling.add(i);
+				}
+			}
+			sm2killing.put(sm, mKilling);
+		}
+		return true;
 	}
 
 	/**
@@ -257,7 +405,7 @@ public class APICompatAnalysis {
 		bw.flush();
 		for (Iterator<BugUnit> it = bugReport.iterator(); it.hasNext();) {
 			BugUnit bugMsg = it.next();
-			if(fullDetail && bugMsg.getBugType() == 0) {
+			if (fullDetail && bugMsg.getBugType() == 0) {
 				continue;
 			}
 			bw.write(bugMsg.toString(fullDetail));

@@ -8,7 +8,6 @@ import java.util.Set;
 import soot.SootMethod;
 import ict.pag.global.ConfigMgr;
 import soot.Value;
-import soot.jimple.IfStmt;
 import soot.jimple.IntConstant;
 import soot.jimple.internal.AbstractJimpleIntBinopExpr;
 import soot.jimple.internal.JEqExpr;
@@ -40,8 +39,10 @@ public class PagHelper {
 		return args;
 	}
 
-	public static boolean isConcernIfStmt(IfStmt is, HashSet<Value> vs) {
-		Value cond = is.getCondition();
+	/**
+	 * Our Concern Expression should be in this format: "SDK_INT op CONSTANT".
+	 */
+	public static boolean isConcernExpr(Value cond, HashSet<Value> vs) {
 		boolean flag = false;
 		flag |= (cond instanceof JGtExpr);
 		flag |= (cond instanceof JGeExpr);
@@ -64,11 +65,11 @@ public class PagHelper {
 		return false;
 	}
 
-	public static Set<Integer> fetchKillingSet(IfStmt stmt) {
+	public static Set<Integer> fetchKillingSet(Value expr) {
 		int mMinVersion = ConfigMgr.v().getMinSdkVersion();
 		int mMaxVersion = ConfigMgr.v().getMaxSdkVersion();
 		Set<Integer> ret = new HashSet<Integer>();
-		AbstractJimpleIntBinopExpr cond = (AbstractJimpleIntBinopExpr) stmt.getCondition();
+		AbstractJimpleIntBinopExpr cond = (AbstractJimpleIntBinopExpr) expr;
 		Value op1 = cond.getOp1();
 		Value op2 = cond.getOp2();
 		if (op2 instanceof IntConstant) {
