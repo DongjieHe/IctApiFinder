@@ -83,6 +83,7 @@ public class APICompatAnalysis {
 		logger.info("Running pre-analysis...");
 		try {
 			preAnalysis(ifStmt2Killing, apiSet);
+			System.out.println(ifStmt2Killing.size() + " vs " + apiSet.size());
 		} catch (Exception e) {
 			System.err.println("fail to pre-analysis " + app.getAppName() + "!!!");
 			e.printStackTrace();
@@ -115,7 +116,6 @@ public class APICompatAnalysis {
 		FinderSolver finderSolver = new FinderSolver(finderProblem);
 		finderSolver.setEnableMergePointChecking(true);
 		finderSolver.solve();
-		System.out.println(ifStmt2Killing.size() + " vs " + apiSet.size());
 		logger.info("Checking API Use compatibility...");
 		try {
 			checkAPICompatibility(fullDetail);
@@ -126,6 +126,7 @@ public class APICompatAnalysis {
 		logger.info("finish analysis " + app.getAppName() + "!");
 		finderSolver = null;
 		finderProblem = null;
+
 	}
 
 	/**
@@ -141,6 +142,9 @@ public class APICompatAnalysis {
 		Map<Unit, Set<Integer>> bool2killing = new HashMap<Unit, Set<Integer>>();
 		Map<SootMethod, Set<Integer>> sm2killing = new HashMap<SootMethod, Set<Integer>>();
 		for (SootClass sc : Scene.v().getApplicationClasses()) {
+			if (sc.getName().startsWith("android.support")) {
+				continue;
+			}
 			List<SootMethod> sms = sc.getMethods();
 			for (SootMethod sm : sms) {
 				if (!sm.isConcrete()) {
@@ -416,10 +420,13 @@ public class APICompatAnalysis {
 
 	private void collectMethodAPIBug(Unit callSite, SootMethod callee, Set<Integer> liveLevels,
 			Set<BugUnit> bugReport) {
+		if (!icfg.isReachable(callSite)) {
+			return;
+		}
+		SootMethod sm = icfg.getMethodOf(callSite);
 		int row = callSite.getJavaSourceStartLineNumber();
 		int col = callSite.getJavaSourceStartColumnNumber();
 		String calleeSig = callee.getSignature();
-		SootMethod sm = icfg.getMethodOf(callSite);
 		boolean isApplication = sm.getDeclaringClass().isApplicationClass();
 		assert isApplication;
 		String callerSig = sm.getSignature();
@@ -428,7 +435,7 @@ public class APICompatAnalysis {
 		if (liveLevels.size() == 0) {
 			String bugMsg = calleeSig + " called in " + callerSig + "<" + row + ", " + col + "> no living Level";
 			BugUnit bug = new BugUnit(bugMsg, tracer.getAllPossibleCallStack(), 0);
-			bugReport.add(bug);
+			// bugReport.add(bug);
 		} else {
 			Set<Integer> missing = new HashSet<Integer>();
 			for (Iterator<Integer> it = liveLevels.iterator(); it.hasNext();) {
@@ -447,6 +454,9 @@ public class APICompatAnalysis {
 	}
 
 	private void collectFieldAPIBug(Unit unit, String fieldSig, Set<Integer> liveLevels, Set<BugUnit> bugReport) {
+		if (!icfg.isReachable(unit)) {
+			return;
+		}
 		SootMethod sm = icfg.getMethodOf(unit);
 		boolean isApplication = sm.getDeclaringClass().isApplicationClass();
 		assert isApplication;
@@ -458,7 +468,7 @@ public class APICompatAnalysis {
 		if (liveLevels.size() == 0) {
 			String bugMsg = fieldSig + " called in " + callerSig + "<" + row + ", " + col + "> no living Level";
 			BugUnit bug = new BugUnit(bugMsg, tracer.getAllPossibleCallStack(), 0);
-			bugReport.add(bug);
+			// bugReport.add(bug);
 		} else {
 			Set<Integer> missing = new HashSet<Integer>();
 			for (Iterator<Integer> it = liveLevels.iterator(); it.hasNext();) {

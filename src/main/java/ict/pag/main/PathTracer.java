@@ -29,6 +29,9 @@ public class PathTracer {
 		if (stack.isEmpty()) {
 			return;
 		}
+		if(possibleCallStack.size() > 10) {
+			return;
+		}
 		SootMethod top = stack.peek();
 		if (entrySet.contains(top)) {
 			// find one path
@@ -60,7 +63,11 @@ public class PathTracer {
 			stack.push(caller);
 			traceHelper(stack, visit, entrySet);
 			stack.pop();
+			if(possibleCallStack.size() > 10) {
+				return;
+			}
 		}
+		visit.remove(top);
 	}
 
 	public void trace() {

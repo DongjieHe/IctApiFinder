@@ -52,11 +52,15 @@ public class SdkAPIMgr {
 	}
 
 	public boolean containAPI(SootMethod sm) {
+		SootClass decl = sm.getDeclaringClass();
+		if (decl.isApplicationClass() || !decl.isLibraryClass()) {
+			return false;
+		}
 		String sig = sm.getSignature();
 		if (apiSet.contains(sig)) {
 			return true;
 		}
-		SootClass decl = sm.getDeclaringClass();
+
 		while (decl.hasSuperclass()) {
 			decl = decl.getSuperclass();
 			sig = SootMethod.getSignature(decl, sm.getName(), sm.getParameterTypes(), sm.getReturnType());
@@ -96,11 +100,21 @@ public class SdkAPIMgr {
 				return true;
 			} else {
 				SootClass decl = callee.getDeclaringClass();
+				decl.isInterface();
 				String desc = PagHelper.descriptor(callee);
-				while (decl.hasSuperclass()) {
-					decl = decl.getSuperclass();
-					if (sdkAPIs.containAPI(decl.getName(), desc)) {
-						return true;
+				if (decl.isInterface()) {
+					// !TODO fix me, I just do for one layer.
+					for (SootClass sc : decl.getInterfaces()) {
+						if (sdkAPIs.containAPI(sc.getName(), desc)) {
+							return true;
+						}
+					}
+				} else {
+					while (decl.hasSuperclass()) {
+						decl = decl.getSuperclass();
+						if (sdkAPIs.containAPI(decl.getName(), desc)) {
+							return true;
+						}
 					}
 				}
 			}
