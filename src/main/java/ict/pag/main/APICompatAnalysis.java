@@ -83,7 +83,6 @@ public class APICompatAnalysis {
 		logger.info("Running pre-analysis...");
 		try {
 			preAnalysis(ifStmt2Killing, apiSet);
-			System.out.println(ifStmt2Killing.size() + " vs " + apiSet.size());
 		} catch (Exception e) {
 			System.err.println("fail to pre-analysis " + app.getAppName() + "!!!");
 			e.printStackTrace();
@@ -116,6 +115,7 @@ public class APICompatAnalysis {
 		FinderSolver finderSolver = new FinderSolver(finderProblem);
 		finderSolver.setEnableMergePointChecking(true);
 		finderSolver.solve();
+		System.out.println(ifStmt2Killing.size() + " vs " + apiSet.size());
 		logger.info("Checking API Use compatibility...");
 		try {
 			checkAPICompatibility(fullDetail);
@@ -425,7 +425,6 @@ public class APICompatAnalysis {
 		}
 		SootMethod sm = icfg.getMethodOf(callSite);
 		int row = callSite.getJavaSourceStartLineNumber();
-		int col = callSite.getJavaSourceStartColumnNumber();
 		String calleeSig = callee.getSignature();
 		boolean isApplication = sm.getDeclaringClass().isApplicationClass();
 		assert isApplication;
@@ -433,7 +432,7 @@ public class APICompatAnalysis {
 		PathTracer tracer = new PathTracer(icfg, callSite);
 		tracer.trace();
 		if (liveLevels.size() == 0) {
-			String bugMsg = calleeSig + " called in " + callerSig + "<" + row + ", " + col + "> no living Level";
+			String bugMsg = calleeSig + " called in " + callerSig + " on line " + row + " no living Level";
 			BugUnit bug = new BugUnit(bugMsg, tracer.getAllPossibleCallStack(), 0);
 			// bugReport.add(bug);
 		} else {
@@ -445,8 +444,7 @@ public class APICompatAnalysis {
 				}
 			}
 			if (missing.size() > 0) {
-				String bugMsg = calleeSig + " called in " + callerSig + "<" + row + ", " + col + "> " + " not in "
-						+ missing;
+				String bugMsg = calleeSig + " called in " + callerSig + " on line " + row + " not in " + missing;
 				BugUnit bug = new BugUnit(bugMsg, tracer.getAllPossibleCallStack(), 1);
 				bugReport.add(bug);
 			}
@@ -462,11 +460,10 @@ public class APICompatAnalysis {
 		assert isApplication;
 		String callerSig = sm.getSignature();
 		int row = unit.getJavaSourceStartLineNumber();
-		int col = unit.getJavaSourceStartColumnNumber();
 		PathTracer tracer = new PathTracer(icfg, unit);
 		tracer.trace();
 		if (liveLevels.size() == 0) {
-			String bugMsg = fieldSig + " called in " + callerSig + "<" + row + ", " + col + "> no living Level";
+			String bugMsg = fieldSig + " called in " + callerSig + " on line " + row + " no living Level";
 			BugUnit bug = new BugUnit(bugMsg, tracer.getAllPossibleCallStack(), 0);
 			// bugReport.add(bug);
 		} else {
@@ -478,8 +475,7 @@ public class APICompatAnalysis {
 				}
 			}
 			if (missing.size() > 0) {
-				String bugMsg = fieldSig + " called in " + callerSig + "<" + row + ", " + col + "> " + " not in "
-						+ missing;
+				String bugMsg = fieldSig + " called in " + callerSig + " on line " + row + " not in " + missing;
 				BugUnit bug = new BugUnit(bugMsg, tracer.getAllPossibleCallStack(), 1);
 				bugReport.add(bug);
 			}

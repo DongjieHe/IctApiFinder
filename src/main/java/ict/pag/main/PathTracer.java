@@ -29,7 +29,7 @@ public class PathTracer {
 		if (stack.isEmpty()) {
 			return;
 		}
-		if(possibleCallStack.size() > 10) {
+		if (possibleCallStack.size() > 10) {
 			return;
 		}
 		SootMethod top = stack.peek();
@@ -63,7 +63,7 @@ public class PathTracer {
 			stack.push(caller);
 			traceHelper(stack, visit, entrySet);
 			stack.pop();
-			if(possibleCallStack.size() > 10) {
+			if (possibleCallStack.size() > 10) {
 				return;
 			}
 		}

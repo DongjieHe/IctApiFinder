@@ -53,7 +53,7 @@ public class SdkAPIMgr {
 
 	public boolean containAPI(SootMethod sm) {
 		SootClass decl = sm.getDeclaringClass();
-		if (decl.isApplicationClass() || !decl.isLibraryClass()) {
+		if (decl.isApplicationClass()) {
 			return false;
 		}
 		String sig = sm.getSignature();
