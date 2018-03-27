@@ -95,7 +95,7 @@ public class APICompatAnalysis {
 		icfg = new JimpleBasedInterproceduralCFG(config.getEnableExceptionTracking(), true);
 		IFDSTabulationProblem<Unit, FinderFact, SootMethod, BiDiInterproceduralCFG<Unit, SootMethod>> finderProblem = new FinderProblem(
 				icfg);
-		((FinderProblem) finderProblem).setThreadsNum(1);
+		// ((FinderProblem) finderProblem).setThreadsNum(1);
 		Set<FinderFact> initialSeeds = new HashSet<FinderFact>();
 		for (int i = ConfigMgr.v().getMinSdkVersion(); i <= ConfigMgr.v().getMaxSdkVersion(); ++i) {
 			FinderFact finderFact = new FinderFact(i);
@@ -421,6 +421,10 @@ public class APICompatAnalysis {
 	private void collectMethodAPIBug(Unit callSite, SootMethod callee, Set<Integer> liveLevels,
 			Set<BugUnit> bugReport) {
 		if (!icfg.isReachable(callSite)) {
+			return;
+		}
+		// !FIXME I don't know support method is here!
+		if(callee.getDeclaringClass().getName().startsWith("android.support")) {
 			return;
 		}
 		SootMethod sm = icfg.getMethodOf(callSite);
