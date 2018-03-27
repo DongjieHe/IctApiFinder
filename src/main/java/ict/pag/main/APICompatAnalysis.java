@@ -206,6 +206,7 @@ public class APICompatAnalysis {
 			} // for method
 		} // for class
 
+		logger.info("finish first-round pre-analysis...");
 		/**
 		 * the second time to traverse the whole apk classes. mainly collect IfStmt that with condition expr of concern
 		 * boolean or returnMethod.
@@ -424,7 +425,7 @@ public class APICompatAnalysis {
 			return;
 		}
 		// !FIXME I don't know support method is here!
-		if(callee.getDeclaringClass().getName().startsWith("android.support")) {
+		if (callee.getDeclaringClass().getName().startsWith("android.support")) {
 			return;
 		}
 		SootMethod sm = icfg.getMethodOf(callSite);

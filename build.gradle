@@ -53,8 +53,8 @@ run {
 task runMain(type: JavaExec) {
 	main = "ict.pag.main.Main"
 	classpath = sourceSets.main.runtimeClasspath
-	// args = ["/home/hedj/Work/android/fdroidNewest/"]
-	args = ["/home/hedj/app-debug.apk"]
+	args = ["/home/hedj/Work/android/fdroidNewest/de.danoeh.antennapod_1060405.apk"]
+	// args = ["/home/hedj/app-debug.apk"]
 	// args = ["/home/hedj/Work/android/fdroidNewest/fr.free.nrw.commons_82.apk"]
     // args = ["/home/hedj/Desktop/app-debug.apk"]
 }

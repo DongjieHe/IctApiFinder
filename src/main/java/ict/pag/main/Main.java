@@ -1,9 +1,43 @@
 package ict.pag.main;
 
 import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import ict.pag.datalog.SdkAPIMgr;
 import ict.pag.global.ConfigMgr;
+
+class IctAPIAnalysisTask implements Callable<Integer> {
+	private String mPath;
+	private SdkAPIMgr mSdkMgr;
+	private boolean mDetail;
+
+	public IctAPIAnalysisTask(String path, SdkAPIMgr sdkMgr, boolean detail) {
+		mPath = path;
+		mSdkMgr = sdkMgr;
+		mDetail = detail;
+	}
+
+	@Override
+	public Integer call() throws Exception {
+		final long beforeRun = System.nanoTime();
+		APICompatAnalysis can = new APICompatAnalysis(mPath);
+		can.setSdkMgr(mSdkMgr);
+		can.runAnalysis(mDetail);
+		can.releaseCallgraph();
+		final long afterRun = System.nanoTime();
+		Integer ans = (int) ((afterRun - beforeRun) / 1E9);
+		return ans;
+	}
+
+}
 
 public class Main {
 
@@ -30,10 +64,15 @@ public class Main {
 					System.err.println(name + " is not an apk file!");
 					continue;
 				} else {
-					APICompatAnalysis can = new APICompatAnalysis(inFile.getAbsolutePath());
-					can.setSdkMgr(sdkMgr);
-					can.runAnalysis(false);
-					can.releaseCallgraph();
+					int runTime = runAnalysis(file.getAbsolutePath(), sdkMgr, true);
+					try {
+						FileWriter fout = new FileWriter("analysis.csv", true);
+						fout.write(name + "," + runTime + "\n");
+						fout.flush();
+						fout.close();
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
 				}
 				System.gc();
 			}
@@ -41,13 +80,30 @@ public class Main {
 			if (!args[0].endsWith(".apk")) {
 				System.err.println("args[0] should be an apk file!");
 			} else {
-				APICompatAnalysis can = new APICompatAnalysis(file.getAbsolutePath());
-				can.setSdkMgr(sdkMgr);
-				can.runAnalysis(true);
-				can.releaseCallgraph();
+				runAnalysis(file.getAbsolutePath(), sdkMgr, true);
 			}
 		}
 		System.out.println("Analysis has run for " + (System.nanoTime() - beforeRun) / 1E9 + " seconds");
+	}
+
+	private static Integer runAnalysis(String path, SdkAPIMgr sdkMgr, boolean detail) {
+		ExecutorService executor = Executors.newSingleThreadExecutor();
+		Callable<Integer> callable = new IctAPIAnalysisTask(path, sdkMgr, detail);
+		FutureTask<Integer> future = new FutureTask<Integer>(callable);
+		executor.execute(future);
+		Integer result = -1;
+		try {
+			result = future.get(5, TimeUnit.MINUTES);
+		} catch (InterruptedException e) {
+			future.cancel(true);
+		} catch (ExecutionException e) {
+			future.cancel(true);
+		} catch (TimeoutException e) {
+			future.cancel(true);
+		} finally {
+			executor.shutdown();
+		}
+		return result;
 	}
 
 	private static void printUsage() {
