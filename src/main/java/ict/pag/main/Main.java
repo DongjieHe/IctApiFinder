@@ -1,8 +1,12 @@
 package ict.pag.main;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -44,8 +48,9 @@ public class Main {
 	/**
 	 * @param args
 	 *            Program arguments. args[0] = path to apk-file or dir to a group apk-files.
+	 * @throws IOException
 	 */
-	public static void main(String[] args) {
+	public static void main(String[] args) throws IOException {
 		if (args.length != 1) {
 			printUsage();
 			return;
@@ -54,12 +59,28 @@ public class Main {
 		SdkAPIMgr sdkMgr = new SdkAPIMgr(cm.getMinSdkVersion(), cm.getMaxSdkVersion(), cm.getSdkDBDir());
 		sdkMgr.dump();
 
+		final String outputFile = "analysis.csv";
 		final long beforeRun = System.nanoTime();
 		File file = new File(args[0]);
 		ExecutorService executor = Executors.newSingleThreadExecutor();
 		if (file.isDirectory()) {
+			Set<String> alreadyCalc = new HashSet<String>();
+			BufferedReader reader = new BufferedReader(new FileReader(outputFile));
+			String line = null;
+			while ((line = reader.readLine()) != null) {
+				String fields[] = line.split(",");
+				assert fields.length == 2;
+				int time = Integer.parseInt(fields[1]);
+				if (time != -1) {
+					alreadyCalc.add(fields[0]);
+				}
+			}
+			reader.close();
 			for (File inFile : file.listFiles()) {
 				String name = inFile.getName();
+				if (alreadyCalc.contains(name)) {
+					continue;
+				}
 				System.gc();
 				if (!name.endsWith(".apk")) {
 					System.err.println(name + " is not an apk file!");
@@ -67,7 +88,7 @@ public class Main {
 				} else {
 					int runTime = runAnalysis(executor, inFile.getAbsolutePath(), sdkMgr, true);
 					try {
-						FileWriter fout = new FileWriter("analysis.csv", true);
+						FileWriter fout = new FileWriter(outputFile, true);
 						fout.write(name + "," + runTime + "\n");
 						fout.flush();
 						fout.close();
