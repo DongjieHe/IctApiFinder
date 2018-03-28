@@ -105,6 +105,7 @@ public class Main {
 				runAnalysis(executor, file.getAbsolutePath(), sdkMgr, true);
 			}
 		}
+		executor.shutdown();
 		System.out.println("Analysis has run for " + (System.nanoTime() - beforeRun) / 1E9 + " seconds");
 	}
 
@@ -121,8 +122,6 @@ public class Main {
 			future.cancel(true);
 		} catch (TimeoutException e) {
 			future.cancel(true);
-		} finally {
-			executor.shutdown();
 		}
 		return result;
 	}
