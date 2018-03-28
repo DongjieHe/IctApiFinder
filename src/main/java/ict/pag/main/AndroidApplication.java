@@ -20,6 +20,7 @@ import soot.PackManager;
 import soot.Scene;
 import soot.SootClass;
 import soot.SootMethod;
+import soot.SourceLocator;
 import soot.jimple.infoflow.AbstractInfoflow;
 import soot.jimple.infoflow.Infoflow;
 import soot.jimple.infoflow.android.InfoflowAndroidConfiguration;
@@ -116,6 +117,10 @@ public class AndroidApplication {
 		this.androidJar = androidJar;
 		this.apkFileLocation = apkFileLocation;
 		this.additionalClasspath = "";
+
+		// Start a new Soot instance
+		G.reset();
+		initializeSoot(true);
 	}
 
 	public String getAppName() {
@@ -732,6 +737,11 @@ public class AndroidApplication {
 		// Load whatever we need
 		Scene.v().loadNecessaryClasses();
 
+		List<String> classInDexes = SourceLocator.v().getClassesUnder(this.apkFileLocation);
+		for (String className : classInDexes) {
+			SootClass c = Scene.v().loadClass(className, SootClass.BODIES);
+			c.setApplicationClass();
+		}
 		// Make sure that we have valid Jimple bodies
 		PackManager.v().getPack("wjpp").apply();
 
@@ -756,12 +766,6 @@ public class AndroidApplication {
 		if (config.getEnableLifecycleSources() && config.isIccEnabled()) {
 			logger.warn("ICC model specified, automatically disabling lifecycle sources");
 			config.setEnableLifecycleSources(false);
-		}
-
-		// Start a new Soot instance
-		if (!config.getUseExistingSootInstance()) {
-			G.reset();
-			initializeSoot(true);
 		}
 
 		// Perform basic app parsing
