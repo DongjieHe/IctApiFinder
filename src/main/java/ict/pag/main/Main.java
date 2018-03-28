@@ -56,6 +56,7 @@ public class Main {
 
 		final long beforeRun = System.nanoTime();
 		File file = new File(args[0]);
+		ExecutorService executor = Executors.newSingleThreadExecutor();
 		if (file.isDirectory()) {
 			for (File inFile : file.listFiles()) {
 				String name = inFile.getName();
@@ -64,7 +65,7 @@ public class Main {
 					System.err.println(name + " is not an apk file!");
 					continue;
 				} else {
-					int runTime = runAnalysis(file.getAbsolutePath(), sdkMgr, true);
+					int runTime = runAnalysis(executor, inFile.getAbsolutePath(), sdkMgr, true);
 					try {
 						FileWriter fout = new FileWriter("analysis.csv", true);
 						fout.write(name + "," + runTime + "\n");
@@ -80,14 +81,13 @@ public class Main {
 			if (!args[0].endsWith(".apk")) {
 				System.err.println("args[0] should be an apk file!");
 			} else {
-				runAnalysis(file.getAbsolutePath(), sdkMgr, true);
+				runAnalysis(executor, file.getAbsolutePath(), sdkMgr, true);
 			}
 		}
 		System.out.println("Analysis has run for " + (System.nanoTime() - beforeRun) / 1E9 + " seconds");
 	}
 
-	private static Integer runAnalysis(String path, SdkAPIMgr sdkMgr, boolean detail) {
-		ExecutorService executor = Executors.newSingleThreadExecutor();
+	private static Integer runAnalysis(ExecutorService executor, String path, SdkAPIMgr sdkMgr, boolean detail) {
 		Callable<Integer> callable = new IctAPIAnalysisTask(path, sdkMgr, detail);
 		FutureTask<Integer> future = new FutureTask<Integer>(callable);
 		executor.execute(future);
