@@ -684,6 +684,7 @@ public class AndroidApplication {
 
 		Options.v().set_no_bodies_for_excluded(true);
 		Options.v().set_allow_phantom_refs(true);
+		Options.v().set_process_multiple_dex(true);
 		Options.v().set_output_format(Options.output_format_none);
 		Options.v().set_whole_program(constructCallgraph);
 		Options.v().set_process_dir(Collections.singletonList(apkFileLocation));

@@ -76,8 +76,8 @@ public class APICompatAnalysis {
 	// need to know which stmt in which method, and api set which there are likely to be visit.
 	public void runAnalysis(boolean fullDetail) {
 		logger.info("Start analysis " + app.getAppName() + "!");
+		logger.info("start constructing call graph for " + app.getAppName());
 		app.constructCallgraph();
-		logger.info("finish build call graph for " + app.getAppName());
 		Map<Unit, Set<Integer>> ifStmt2Killing = new HashMap<Unit, Set<Integer>>();
 		Set<Unit> apiSet = new HashSet<Unit>();
 		logger.info("Running pre-analysis...");
@@ -91,11 +91,12 @@ public class APICompatAnalysis {
 		ConcernUnits.v().setUnitToKillMap(ifStmt2Killing);
 		ConcernUnits.v().setApiSet(apiSet);
 
-		logger.info("Setting initial seeds...");
 		icfg = new JimpleBasedInterproceduralCFG(config.getEnableExceptionTracking(), true);
 		IFDSTabulationProblem<Unit, FinderFact, SootMethod, BiDiInterproceduralCFG<Unit, SootMethod>> finderProblem = new FinderProblem(
 				icfg);
+		logger.info("finish building icfg for " + app.getAppName());
 		// ((FinderProblem) finderProblem).setThreadsNum(1);
+		logger.info("Setting initial seeds...");
 		Set<FinderFact> initialSeeds = new HashSet<FinderFact>();
 		for (int i = ConfigMgr.v().getMinSdkVersion(); i <= ConfigMgr.v().getMaxSdkVersion(); ++i) {
 			FinderFact finderFact = new FinderFact(i);
@@ -147,10 +148,9 @@ public class APICompatAnalysis {
 			}
 			List<SootMethod> sms = sc.getMethods();
 			for (SootMethod sm : sms) {
-				if (!sm.isConcrete()) {
+				if (!sm.isConcrete() || !sm.hasActiveBody()) {
 					continue;
 				}
-				sm.retrieveActiveBody();
 				Body body = sm.getActiveBody();
 				BriefUnitGraph noBug = new BriefUnitGraph(body);
 				SdkIntMustAliasAnalysis simaa = new SdkIntMustAliasAnalysis(noBug);
@@ -405,7 +405,7 @@ public class APICompatAnalysis {
 		String reportFile = outDir + File.separator + app.getAppName() + ".report";
 		FileOutputStream fos = new FileOutputStream(reportFile);
 		BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(fos, "UTF-8"));
-		bw.write(app.getAppName() + " minSdkVersion: " + minSdkVersion + ", maxSdkVersion: " + maxSdkVersion);
+		bw.write(app.getAppName() + " minSdkVersion: " + minSdkVersion + ", targetSdkVersion: " + maxSdkVersion);
 		bw.newLine();
 		bw.flush();
 		for (Iterator<BugUnit> it = bugReport.iterator(); it.hasNext();) {
@@ -435,7 +435,6 @@ public class APICompatAnalysis {
 		assert isApplication;
 		String callerSig = sm.getSignature();
 		PathTracer tracer = new PathTracer(icfg, callSite);
-		tracer.trace();
 		if (liveLevels.size() == 0) {
 			String bugMsg = calleeSig + " called in " + callerSig + " on line " + row + " no living Level";
 			BugUnit bug = new BugUnit(bugMsg, tracer.getAllPossibleCallStack(), 0);
@@ -449,6 +448,7 @@ public class APICompatAnalysis {
 				}
 			}
 			if (missing.size() > 0) {
+				tracer.trace();
 				String bugMsg = calleeSig + " called in " + callerSig + " on line " + row + " not in " + missing;
 				BugUnit bug = new BugUnit(bugMsg, tracer.getAllPossibleCallStack(), 1);
 				bugReport.add(bug);
@@ -466,7 +466,6 @@ public class APICompatAnalysis {
 		String callerSig = sm.getSignature();
 		int row = unit.getJavaSourceStartLineNumber();
 		PathTracer tracer = new PathTracer(icfg, unit);
-		tracer.trace();
 		if (liveLevels.size() == 0) {
 			String bugMsg = fieldSig + " called in " + callerSig + " on line " + row + " no living Level";
 			BugUnit bug = new BugUnit(bugMsg, tracer.getAllPossibleCallStack(), 0);
@@ -480,6 +479,7 @@ public class APICompatAnalysis {
 				}
 			}
 			if (missing.size() > 0) {
+				tracer.trace();
 				String bugMsg = fieldSig + " called in " + callerSig + " on line " + row + " not in " + missing;
 				BugUnit bug = new BugUnit(bugMsg, tracer.getAllPossibleCallStack(), 1);
 				bugReport.add(bug);
