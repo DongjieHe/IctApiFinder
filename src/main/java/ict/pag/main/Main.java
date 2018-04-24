@@ -15,36 +15,41 @@ import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import ict.pag.datalog.SdkAPIMgr;
 import ict.pag.global.ConfigMgr;
+import ict.pag.utils.CodeTimer;
 
-class IctAPIAnalysisTask implements Callable<Integer> {
+class IctAPIAnalysisTask implements Callable<StatUnit> {
 	private String mPath;
 	private SdkAPIMgr mSdkMgr;
 	private boolean mDetail;
+	private CodeTimer codeTimer;
 
 	public IctAPIAnalysisTask(String path, SdkAPIMgr sdkMgr, boolean detail) {
 		mPath = path;
 		mSdkMgr = sdkMgr;
 		mDetail = detail;
+		codeTimer = new CodeTimer();
 	}
 
 	@Override
-	public Integer call() throws Exception {
-		final long beforeRun = System.nanoTime();
-		APICompatAnalysis can = new APICompatAnalysis(mPath);
+	public StatUnit call() throws Exception {
+		codeTimer.startTimer();
+		IctApiFinder can = new IctApiFinder(mPath);
 		can.setSdkMgr(mSdkMgr);
-		can.runAnalysis(mDetail);
+		StatUnit su = can.runAnalysis(mDetail);
 		can.releaseCallgraph();
-		final long afterRun = System.nanoTime();
-		Integer ans = (int) ((afterRun - beforeRun) / 1E9);
-		return ans;
+		codeTimer.stopTimer();
+		su.setTotal(codeTimer.getExecutionTime());
+		return su;
 	}
 
 }
 
 public class Main {
-
 	/**
 	 * @param args
 	 *            Program arguments. args[0] = path to apk-file or dir to a group apk-files.
@@ -55,12 +60,17 @@ public class Main {
 			printUsage();
 			return;
 		}
+		final Logger logger = LoggerFactory.getLogger(Main.class);
+		CodeTimer codeTimer = new CodeTimer();
+		codeTimer.startTimer();
 		ConfigMgr cm = ConfigMgr.v();
 		SdkAPIMgr sdkMgr = new SdkAPIMgr(cm.getMinSdkVersion(), cm.getMaxSdkVersion(), cm.getSdkDBDir());
+		codeTimer.stopTimer();
+		logger.info("SDK API loading time " + (codeTimer.getExecutionTime()) / 1E9 + " seconds");
 		sdkMgr.dump();
 
 		final String outputFile = "analysis.csv";
-		final long beforeRun = System.nanoTime();
+		codeTimer.startTimer();
 		File file = new File(args[0]);
 		ExecutorService executor = Executors.newSingleThreadExecutor();
 		if (file.isDirectory()) {
@@ -83,10 +93,10 @@ public class Main {
 				}
 				System.gc();
 				if (!name.endsWith(".apk")) {
-					System.err.println(name + " is not an apk file!");
+					logger.error(name + " is not an apk file!");
 					continue;
 				} else {
-					int runTime = runAnalysis(executor, inFile.getAbsolutePath(), sdkMgr, true);
+					StatUnit runTime = runAnalysis(executor, inFile.getAbsolutePath(), sdkMgr, false);
 					try {
 						FileWriter fout = new FileWriter(outputFile, true);
 						fout.write(name + "," + runTime + "\n");
@@ -100,20 +110,21 @@ public class Main {
 			}
 		} else {
 			if (!args[0].endsWith(".apk")) {
-				System.err.println("args[0] should be an apk file!");
+				logger.error("args[0] should be an apk file!");
 			} else {
 				runAnalysis(executor, file.getAbsolutePath(), sdkMgr, true);
 			}
 		}
 		executor.shutdown();
-		System.out.println("Analysis has run for " + (System.nanoTime() - beforeRun) / 1E9 + " seconds");
+		codeTimer.stopTimer();
+		logger.info("Analysis has run for " + (codeTimer.getExecutionTime()) / 1E9 + " seconds");
 	}
 
-	private static Integer runAnalysis(ExecutorService executor, String path, SdkAPIMgr sdkMgr, boolean detail) {
-		Callable<Integer> callable = new IctAPIAnalysisTask(path, sdkMgr, detail);
-		FutureTask<Integer> future = new FutureTask<Integer>(callable);
+	private static StatUnit runAnalysis(ExecutorService executor, String path, SdkAPIMgr sdkMgr, boolean detail) {
+		Callable<StatUnit> callable = new IctAPIAnalysisTask(path, sdkMgr, detail);
+		FutureTask<StatUnit> future = new FutureTask<StatUnit>(callable);
 		executor.execute(future);
-		Integer result = -1;
+		StatUnit result = new StatUnit();
 		try {
 			result = future.get(5, TimeUnit.MINUTES);
 		} catch (InterruptedException e) {
@@ -127,7 +138,7 @@ public class Main {
 	}
 
 	private static void printUsage() {
-		System.out.println("FlowDroid (c) Program Analysis Group @ ICT, CAS");
+		System.out.println("IctApiFinder (c) Program Analysis Group @ ICT, CAS");
 		System.out.println();
 		System.out.println("\tCorrect arguments: [0] = apk-file or [0] = apk-files-directory");
 	}

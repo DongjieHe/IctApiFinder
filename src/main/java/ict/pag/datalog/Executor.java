@@ -26,7 +26,7 @@ public class Executor {
 	}
 
 	public List<String> execute(String workingDirectory, String cmd) {
-		List<String> retList = new ArrayList<String>();
+		final List<String> retList = new ArrayList<String>();
 		ProcessBuilder pb = new ProcessBuilder("/bin/bash", "-c", cmd);
 		// Set bash environment.
 		Map<String, String> env = pb.environment();

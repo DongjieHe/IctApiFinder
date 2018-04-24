@@ -24,6 +24,7 @@ import ict.pag.core.SdkIntMustAliasAnalysis;
 import ict.pag.datalog.SdkAPIMgr;
 import ict.pag.global.ConcernUnits;
 import ict.pag.global.ConfigMgr;
+import ict.pag.utils.CodeTimer;
 import ict.pag.utils.PagHelper;
 import soot.Body;
 import soot.BooleanType;
@@ -52,14 +53,15 @@ import soot.toolkits.graph.Block;
 import soot.toolkits.graph.BriefBlockGraph;
 import soot.toolkits.graph.BriefUnitGraph;
 
-public class APICompatAnalysis {
+public class IctApiFinder {
 	private static InfoflowAndroidConfiguration config;
 	private final Logger logger = LoggerFactory.getLogger(getClass());
 	private AndroidApplication app;
 	private BiDiInterproceduralCFG<Unit, SootMethod> icfg;
 	private SdkAPIMgr sdkMgr;
+	private CodeTimer codeTimer;
 
-	public APICompatAnalysis(String apkPath) {
+	public IctApiFinder(String apkPath) {
 		config = new InfoflowAndroidConfiguration();
 		config.setUseExistingSootInstance(false);
 		String androidJarDir = ConfigMgr.v().getSdkDBDir();
@@ -67,6 +69,7 @@ public class APICompatAnalysis {
 		app.setConfig(config);
 		sdkMgr = null;
 		icfg = null;
+		codeTimer = new CodeTimer();
 	}
 
 	public void setSdkMgr(SdkAPIMgr sdkMgr) {
@@ -74,29 +77,38 @@ public class APICompatAnalysis {
 	}
 
 	// need to know which stmt in which method, and api set which there are likely to be visit.
-	public void runAnalysis(boolean fullDetail) {
+	public StatUnit runAnalysis(boolean fullDetail) {
 		logger.info("Start analysis " + app.getAppName() + "!");
 		logger.info("start constructing call graph for " + app.getAppName());
+		StatUnit su = new StatUnit();
+
+		codeTimer.startTimer();
 		app.constructCallgraph();
-		Map<Unit, Set<Integer>> ifStmt2Killing = new HashMap<Unit, Set<Integer>>();
-		Set<Unit> apiSet = new HashSet<Unit>();
-		logger.info("Running pre-analysis...");
-		try {
-			preAnalysis(ifStmt2Killing, apiSet);
-		} catch (Exception e) {
-			System.err.println("fail to pre-analysis " + app.getAppName() + "!!!");
-			e.printStackTrace();
-		}
-
-		ConcernUnits.v().setUnitToKillMap(ifStmt2Killing);
-		ConcernUnits.v().setApiSet(apiSet);
-
 		icfg = new JimpleBasedInterproceduralCFG(config.getEnableExceptionTracking(), true);
 		IFDSTabulationProblem<Unit, FinderFact, SootMethod, BiDiInterproceduralCFG<Unit, SootMethod>> finderProblem = new FinderProblem(
 				icfg);
+		codeTimer.stopTimer();
+		su.setIcfg(codeTimer.getExecutionTime());
 		logger.info("finish building icfg for " + app.getAppName());
 		// ((FinderProblem) finderProblem).setThreadsNum(1);
+
+		logger.info("Running pre-analysis...");
+		codeTimer.startTimer();
+		Map<Unit, Set<Integer>> ifStmt2Killing = new HashMap<Unit, Set<Integer>>();
+		Set<Unit> apiSet = new HashSet<Unit>();
+		try {
+			preAnalysis(ifStmt2Killing, apiSet);
+		} catch (Exception e) {
+			logger.error("fail to pre-analysis " + app.getAppName() + "!!!");
+			e.printStackTrace();
+		}
+		ConcernUnits.v().setUnitToKillMap(ifStmt2Killing);
+		ConcernUnits.v().setApiSet(apiSet);
+		codeTimer.stopTimer();
+		su.setPreAna(codeTimer.getExecutionTime());
+
 		logger.info("Setting initial seeds...");
+		codeTimer.startTimer();
 		Set<FinderFact> initialSeeds = new HashSet<FinderFact>();
 		for (int i = ConfigMgr.v().getMinSdkVersion(); i <= ConfigMgr.v().getMaxSdkVersion(); ++i) {
 			FinderFact finderFact = new FinderFact(i);
@@ -116,18 +128,26 @@ public class APICompatAnalysis {
 		FinderSolver finderSolver = new FinderSolver(finderProblem);
 		finderSolver.setEnableMergePointChecking(true);
 		finderSolver.solve();
-		System.out.println(ifStmt2Killing.size() + " vs " + apiSet.size());
+		codeTimer.stopTimer();
+		su.setIfds(codeTimer.getExecutionTime());
+
 		logger.info("Checking API Use compatibility...");
+		codeTimer.startTimer();
+		int bugNum = -1;
 		try {
-			checkAPICompatibility(fullDetail);
+			bugNum = checkAPICompatibility(fullDetail);
 		} catch (Exception e) {
-			System.err.println("check API Compatibility in " + app.getAppName() + " failed!");
+			logger.error("check API Compatibility in " + app.getAppName() + " failed!");
 			e.printStackTrace();
 		}
+		codeTimer.stopTimer();
+		su.setCheckComp(codeTimer.getExecutionTime());
+		su.setBugNum(bugNum);
 		logger.info("finish analysis " + app.getAppName() + "!");
 		finderSolver = null;
 		finderProblem = null;
 
+		return su;
 	}
 
 	/**
@@ -339,7 +359,7 @@ public class APICompatAnalysis {
 	/**
 	 * Check whether this app contain API incompatibility problem.
 	 */
-	private void checkAPICompatibility(boolean fullDetail) throws Exception {
+	private int checkAPICompatibility(boolean fullDetail) throws Exception {
 		Map<Unit, Set<Integer>> api2live = ConcernUnits.v().getApi2live();
 		Set<BugUnit> bugReport = new HashSet<BugUnit>();
 		int minSdkVersion = app.getMinSdkVersion();
@@ -399,7 +419,7 @@ public class APICompatAnalysis {
 		// report bugs
 		if (bugReport.size() == 0) {
 			logger.info("no potential bugs!");
-			return;
+			return 0;
 		}
 		String outDir = ConfigMgr.v().getOutputDir();
 		String reportFile = outDir + File.separator + app.getAppName() + ".report";
@@ -417,6 +437,7 @@ public class APICompatAnalysis {
 			bw.newLine();
 		}
 		bw.close();
+		return bugReport.size();
 	}
 
 	private void collectMethodAPIBug(Unit callSite, SootMethod callee, Set<Integer> liveLevels,
