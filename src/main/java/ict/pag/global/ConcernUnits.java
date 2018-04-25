@@ -26,6 +26,10 @@ public class ConcernUnits {
 		return G.v().get_ConcernUnits();
 	}
 
+	public static void reset() {
+		G.v().release_ConcernUnits();
+	}
+
 	public Map<Unit, Set<Integer>> getUnitToKillMap() {
 		return unit2kill;
 	}

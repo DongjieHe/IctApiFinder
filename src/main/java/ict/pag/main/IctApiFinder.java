@@ -144,9 +144,10 @@ public class IctApiFinder {
 		su.setCheckComp(codeTimer.getExecutionTime());
 		su.setBugNum(bugNum);
 		logger.info("finish analysis " + app.getAppName() + "!");
+		ConcernUnits.reset();
 		finderSolver = null;
 		finderProblem = null;
-
+		releaseCallgraph();
 		return su;
 	}
 

@@ -72,15 +72,15 @@ public class Main {
 		final String outputFile = "analysis.csv";
 		codeTimer.startTimer();
 		File file = new File(args[0]);
-		ExecutorService executor = Executors.newSingleThreadExecutor();
+
 		if (file.isDirectory()) {
 			Set<String> alreadyCalc = new HashSet<String>();
 			BufferedReader reader = new BufferedReader(new FileReader(outputFile));
 			String line = null;
 			while ((line = reader.readLine()) != null) {
 				String fields[] = line.split(",");
-				assert fields.length == 2;
-				int time = Integer.parseInt(fields[1]);
+				assert fields.length == 7;
+				int time = Integer.parseInt(fields[6]);
 				if (time != -1) {
 					alreadyCalc.add(fields[0]);
 				}
@@ -91,12 +91,11 @@ public class Main {
 				if (alreadyCalc.contains(name)) {
 					continue;
 				}
-				System.gc();
 				if (!name.endsWith(".apk")) {
 					logger.error(name + " is not an apk file!");
 					continue;
 				} else {
-					StatUnit runTime = runAnalysis(executor, inFile.getAbsolutePath(), sdkMgr, false);
+					StatUnit runTime = runAnalysis(inFile.getAbsolutePath(), sdkMgr, false);
 					try {
 						FileWriter fout = new FileWriter(outputFile, true);
 						fout.write(name + "," + runTime + "\n");
@@ -112,19 +111,20 @@ public class Main {
 			if (!args[0].endsWith(".apk")) {
 				logger.error("args[0] should be an apk file!");
 			} else {
-				runAnalysis(executor, file.getAbsolutePath(), sdkMgr, true);
+				runAnalysis(file.getAbsolutePath(), sdkMgr, true);
 			}
 		}
-		executor.shutdown();
+
 		codeTimer.stopTimer();
 		logger.info("Analysis has run for " + (codeTimer.getExecutionTime()) / 1E9 + " seconds");
 	}
 
-	private static StatUnit runAnalysis(ExecutorService executor, String path, SdkAPIMgr sdkMgr, boolean detail) {
+	private static StatUnit runAnalysis(String path, SdkAPIMgr sdkMgr, boolean detail) {
+		ExecutorService executor = Executors.newSingleThreadExecutor();
 		Callable<StatUnit> callable = new IctAPIAnalysisTask(path, sdkMgr, detail);
 		FutureTask<StatUnit> future = new FutureTask<StatUnit>(callable);
 		executor.execute(future);
-		StatUnit result = new StatUnit();
+		StatUnit result = null;
 		try {
 			result = future.get(5, TimeUnit.MINUTES);
 		} catch (InterruptedException e) {
@@ -133,6 +133,11 @@ public class Main {
 			future.cancel(true);
 		} catch (TimeoutException e) {
 			future.cancel(true);
+		} finally {
+			executor.shutdown();
+		}
+		if (result == null) {
+			result = new StatUnit();
 		}
 		return result;
 	}

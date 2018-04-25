@@ -37,7 +37,7 @@ public class Singletons {
 		return instance_ConcernUnits;
 	}
 
-	protected void release_ConcernUnits() {
+	public void release_ConcernUnits() {
 		instance_ConcernUnits = null;
 	}
 }
