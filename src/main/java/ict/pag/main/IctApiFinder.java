@@ -364,7 +364,8 @@ public class IctApiFinder {
 		Map<Unit, Set<Integer>> api2live = ConcernUnits.v().getApi2live();
 		Set<BugUnit> bugReport = new HashSet<BugUnit>();
 		int minSdkVersion = app.getMinSdkVersion();
-		int maxSdkVersion = app.targetSdkVersion();
+		// int maxSdkVersion = app.targetSdkVersion();
+		int maxSdkVersion = ConfigMgr.v().getMaxSdkVersion();
 		for (Entry<Unit, Set<Integer>> entry : api2live.entrySet()) {
 			Unit key = entry.getKey();
 			Set<Integer> liveLevels = entry.getValue();
@@ -422,6 +423,7 @@ public class IctApiFinder {
 			logger.info("no potential bugs!");
 			return 0;
 		}
+		logger.info("reporting bugs .....");
 		String outDir = ConfigMgr.v().getOutputDir();
 		String reportFile = outDir + File.separator + app.getAppName() + ".report";
 		FileOutputStream fos = new FileOutputStream(reportFile);
@@ -431,9 +433,6 @@ public class IctApiFinder {
 		bw.flush();
 		for (Iterator<BugUnit> it = bugReport.iterator(); it.hasNext();) {
 			BugUnit bugMsg = it.next();
-			if (fullDetail && bugMsg.getBugType() == 0) {
-				continue;
-			}
 			bw.write(bugMsg.toString(fullDetail));
 			bw.newLine();
 		}
@@ -460,7 +459,7 @@ public class IctApiFinder {
 		if (liveLevels.size() == 0) {
 			String bugMsg = calleeSig + " called in " + callerSig + " on line " + row + " no living Level";
 			BugUnit bug = new BugUnit(bugMsg, tracer.getAllPossibleCallStack(), 0);
-			// bugReport.add(bug);
+			bugReport.add(bug);
 		} else {
 			Set<Integer> missing = new HashSet<Integer>();
 			for (Iterator<Integer> it = liveLevels.iterator(); it.hasNext();) {
@@ -491,7 +490,7 @@ public class IctApiFinder {
 		if (liveLevels.size() == 0) {
 			String bugMsg = fieldSig + " called in " + callerSig + " on line " + row + " no living Level";
 			BugUnit bug = new BugUnit(bugMsg, tracer.getAllPossibleCallStack(), 0);
-			// bugReport.add(bug);
+			bugReport.add(bug);
 		} else {
 			Set<Integer> missing = new HashSet<Integer>();
 			for (Iterator<Integer> it = liveLevels.iterator(); it.hasNext();) {

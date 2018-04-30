@@ -111,7 +111,8 @@ public class Main {
 			if (!args[0].endsWith(".apk")) {
 				logger.error("args[0] should be an apk file!");
 			} else {
-				runAnalysis(file.getAbsolutePath(), sdkMgr, true);
+				StatUnit runTime = runAnalysis(file.getAbsolutePath(), sdkMgr, true);
+				logger.info(args[0] + ": " + runTime.toString());
 			}
 		}
 
@@ -129,10 +130,13 @@ public class Main {
 			result = future.get(5, TimeUnit.MINUTES);
 		} catch (InterruptedException e) {
 			future.cancel(true);
+			e.printStackTrace();
 		} catch (ExecutionException e) {
 			future.cancel(true);
+			e.printStackTrace();
 		} catch (TimeoutException e) {
 			future.cancel(true);
+			e.printStackTrace();
 		} finally {
 			executor.shutdown();
 		}

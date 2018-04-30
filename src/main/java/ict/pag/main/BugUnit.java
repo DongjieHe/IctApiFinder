@@ -21,11 +21,15 @@ public class BugUnit {
 
 	@Override
 	public String toString() {
-		String retStr = "BUG: " + bugMsg + "\n";
+		String warnningOrBug = bugType == 0 ? "WARNING: " : "BUG: ";
+		String retStr = warnningOrBug + bugMsg + "\n";
 		return retStr;
 	}
 
 	public String toString(boolean fullDetail) {
+		if(bugType == 0) {
+			return "WARNING: " + bugMsg + "\n";
+		}
 		String retStr = "BUG: " + bugMsg + "\n";
 		assert mPossibleCallStack.size() > 0;
 		if (fullDetail == false) {
