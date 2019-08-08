@@ -9,11 +9,9 @@ import soot.Unit;
 
 public class FinderCallToReturnFlowFunction implements FlowFunction<FinderFact> {
 	private Unit mCallSite;
-	private Unit mReturnSite;
 
 	public FinderCallToReturnFlowFunction(Unit callSite, Unit returnSite) {
 		mCallSite = callSite;
-		mReturnSite = returnSite;
 	}
 
 	@Override

@@ -100,15 +100,4 @@ public class LBWorkspaceConnector implements WorkspaceAPI {
 		return sdkVersion;
 	}
 
-	public static void main(String args[]) {
-		Executor executor = new Executor();
-		LBWorkspaceConnector lbcon = new LBWorkspaceConnector(executor,
-				"/home/hedj/Work/android/generatedFacts/android-7.1.2_r9/android-7.1.2_r9-sdk-db", 25);
-		lbcon.connect("database");
-		List<String> superclass = lbcon.query("Superclass");
-		for (int i = 0; i < superclass.size(); ++i) {
-			System.out.println(superclass.get(i));
-		}
-	}
-
 }

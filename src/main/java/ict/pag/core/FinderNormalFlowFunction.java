@@ -1,7 +1,6 @@
 package ict.pag.core;
 
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 import heros.FlowFunction;
@@ -33,7 +32,6 @@ public class FinderNormalFlowFunction implements FlowFunction<FinderFact> {
 			JIfStmt stmt = (JIfStmt) mCurr;
 			Unit tgt = stmt.getTarget();
 			Set<Integer> killSet = ConcernUnits.v().getKillSet(mCurr);
-			List<Unit> succs = mInterCFG.getSuccsOf(mCurr);
 			// assert succs.size() == 2;
 			// !TODO why there are more than 2 successors follow an if statement?
 			if (mSucc.equals(tgt)) {

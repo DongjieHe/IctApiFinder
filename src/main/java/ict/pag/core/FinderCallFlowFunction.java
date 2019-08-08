@@ -9,11 +9,9 @@ import soot.Unit;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 
 public class FinderCallFlowFunction implements FlowFunction<FinderFact> {
-	private Unit mCallStmt;
 
 	public FinderCallFlowFunction(Unit callStmt, SootMethod destinationMethod,
 			BiDiInterproceduralCFG<Unit, SootMethod> icfg) {
-		mCallStmt = callStmt;
 	}
 
 	@Override

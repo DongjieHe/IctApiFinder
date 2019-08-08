@@ -16,12 +16,10 @@ public class PathTracer {
 	private BiDiInterproceduralCFG<Unit, SootMethod> icfg;
 	private SootMethod currMethod;
 	private List<List<SootMethod>> possibleCallStack;
-	private Unit mUnit;
 
 	public PathTracer(BiDiInterproceduralCFG<Unit, SootMethod> cfg, Unit unit) {
 		icfg = cfg;
 		currMethod = icfg.getMethodOf(unit);
-		mUnit = unit;
 		possibleCallStack = new ArrayList<List<SootMethod>>();
 	}
 

@@ -66,11 +66,4 @@ public class FactsLoader {
 		return retMap;
 	}
 
-	public static void main(String args[]) {
-		Executor executor = new Executor();
-		LBWorkspaceConnector conn = new LBWorkspaceConnector(executor,
-				"/home/hedj/Work/android/formatResult/android-7.0.0_r1/generatedFacts/android-7.0.0_r1-sdk-db", 24);
-		conn.connect("database");
-		PagHelper.listSetElements(getApplicationTypes(conn));
-	}
 }

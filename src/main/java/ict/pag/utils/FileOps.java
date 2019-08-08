@@ -25,10 +25,4 @@ public class FileOps {
 		return d;
 	}
 
-	public static void main(String args[]) {
-		File testFile = findFileOrThrow("/home/hedj/IELTS-Speaking.odt", "not a file");
-		System.out.println(testFile.getName() + " == " + testFile.getPath());
-		File testFile1 = findDirOrThrow("/home/hedj", "not a directory");
-		System.out.println(testFile1.getName() + " == " + testFile1.getPath());
-	}
 }
