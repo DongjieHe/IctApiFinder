@@ -31,10 +31,10 @@ public class Executor {
 		// Set bash environment.
 		Map<String, String> env = pb.environment();
 		if (this.environment == null || this.environment.get("LOGICBLOX_HOME") == null) {
-			env.put("PATH", "/usr/local/pa-datalog/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin");
-			env.put("LOGICBLOX_HOME", "/usr/local/pa-datalog");
-			env.put("JAVA_HOME", "/usr/local/java/openjdk8");
-			env.put("LD_LIBRARY_PATH", "/usr/local/pa-datalog/lib/cpp");
+			env.put("PATH", "/opt/lb/pa-datalog/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin");
+			env.put("LOGICBLOX_HOME", "/opt/lb/pa-datalog");
+			env.put("JAVA_HOME", "/usr/local/java/jdk8");
+			env.put("LD_LIBRARY_PATH", "/opt/lb/pa-datalog/lib/cpp");
 			env.put("LB_PAGER_FORCE_START", "1");
 		} else {
 			env.putAll(this.environment);
@@ -76,7 +76,7 @@ public class Executor {
 			}
 			int returnCode = process.waitFor();
 			if (returnCode != 0) {
-				throw new RuntimeException("Command exited with non-zero status:\n " + cmd);
+				throw new RuntimeException("Command exited with non-zero (" + returnCode + ") status:\n " + cmd);
 			}
 		} catch (IOException e) {
 			e.printStackTrace();

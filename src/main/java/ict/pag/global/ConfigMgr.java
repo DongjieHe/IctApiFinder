@@ -9,6 +9,7 @@ import org.json.JSONObject;
 import org.json.JSONTokener;
 
 public class ConfigMgr {
+	private String sdkDir = null;
 	private String sdkDBDir = null;
 	private int minSdkVersion;
 	private int maxSdkVersion;
@@ -18,6 +19,7 @@ public class ConfigMgr {
 	private void loadFromConfigFile() {
 		try {
 			JSONObject jsonObj = new JSONObject(new JSONTokener(new FileReader(new File("data/config.json"))));
+			sdkDir = jsonObj.getString("SDK_DIR").toString();
 			sdkDBDir = jsonObj.getString("SDK_DB_DIR").toString();
 			outputDir = jsonObj.getString("OUT_DIR").toString();
 			testSetDir = jsonObj.getString("APK_TEST_SET").toString();
@@ -37,6 +39,10 @@ public class ConfigMgr {
 
 	public static ConfigMgr v() {
 		return G.v().get_ConfigMgr();
+	}
+
+	public String getSdkDir() {
+		return sdkDir;
 	}
 
 	public String getSdkDBDir() {

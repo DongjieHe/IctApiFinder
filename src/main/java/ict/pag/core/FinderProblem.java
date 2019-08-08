@@ -28,10 +28,10 @@ public class FinderProblem
 	}
 
 	/**
-	 * Gets whether the given method is an entry point, i.e. one of the initial seeds belongs to the given method
+	 * Gets whether the given method is an entry point, i.e. one of the initial
+	 * seeds belongs to the given method
 	 * 
-	 * @param sm
-	 *            The method to check
+	 * @param sm The method to check
 	 * @return True if the given method is an entry point, otherwise false
 	 */
 	protected boolean isInitialMethod(SootMethod sm) {
@@ -66,10 +66,8 @@ public class FinderProblem
 	/**
 	 * Adds the given initial seeds to the information flow problem
 	 * 
-	 * @param unit
-	 *            The unit to be considered as a seed
-	 * @param seeds
-	 *            The abstractions with which to start at the given seed
+	 * @param unit  The unit to be considered as a seed
+	 * @param seeds The abstractions with which to start at the given seed
 	 */
 	public void addInitialSeeds(Unit unit, Set<FinderFact> seeds) {
 		if (this.initialSeeds.containsKey(unit))
@@ -81,16 +79,19 @@ public class FinderProblem
 	/**
 	 * Gets whether this information flow problem has initial seeds
 	 * 
-	 * @return True if this information flow problem has initial seeds, otherwise false
+	 * @return True if this information flow problem has initial seeds, otherwise
+	 *         false
 	 */
 	public boolean hasInitialSeeds() {
 		return !this.initialSeeds.isEmpty();
 	}
 
 	/**
-	 * Gets the initial seeds with which this information flow problem has been configured
+	 * Gets the initial seeds with which this information flow problem has been
+	 * configured
 	 * 
-	 * @return The initial seeds with which this information flow problem has been configured.
+	 * @return The initial seeds with which this information flow problem has been
+	 *         configured.
 	 */
 	public Map<Unit, Set<FinderFact>> getInitialSeeds() {
 		return this.initialSeeds;

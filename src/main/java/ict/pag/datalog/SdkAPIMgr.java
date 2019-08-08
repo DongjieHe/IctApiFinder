@@ -17,7 +17,7 @@ public class SdkAPIMgr {
 	private Map<Integer, SdkAPIs> level2SdkAPIs;
 	private Set<String> apiSet;
 
-	public SdkAPIMgr(int mMin, int mMax, String sdkDir) {
+	public SdkAPIMgr(int mMin, int mMax, String sdkDBDir) {
 		assert mMin <= mMax;
 		minLevel = mMin;
 		maxLevel = mMax;
@@ -29,7 +29,7 @@ public class SdkAPIMgr {
 			if (i == 20) {
 				continue; // api level 20 is a special case.
 			}
-			String sdkPath = sdkDir + File.separator + "android-" + i;
+			String sdkPath = sdkDBDir + File.separator + "" + i;
 			LBWorkspaceConnector conn = new LBWorkspaceConnector(executor, sdkPath, i);
 			conn.connect("database");
 			SdkAPIs tmp = new SdkAPIs(conn);

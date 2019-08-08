@@ -27,7 +27,7 @@ public class BugUnit {
 	}
 
 	public String toString(boolean fullDetail) {
-		if(bugType == 0) {
+		if (bugType == 0) {
 			return "WARNING: " + bugMsg + "\n";
 		}
 		String retStr = "BUG: " + bugMsg + "\n";

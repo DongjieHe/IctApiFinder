@@ -152,11 +152,11 @@ public class AndroidApplication {
 	}
 
 	/**
-	 * Sets the class names of callbacks. If this value is null, it automatically loads the names from
-	 * AndroidCallbacks.txt as the default behavior.
+	 * Sets the class names of callbacks. If this value is null, it automatically
+	 * loads the names from AndroidCallbacks.txt as the default behavior.
 	 *
-	 * @param callbackClasses
-	 *            The class names of callbacks or null to use the default file.
+	 * @param callbackClasses The class names of callbacks or null to use the
+	 *                        default file.
 	 */
 	public void setCallbackClasses(Set<String> callbackClasses) {
 		this.callbackClasses = callbackClasses;
@@ -169,10 +169,10 @@ public class AndroidApplication {
 	/**
 	 * Parses common app resources such as the manifest file
 	 *
-	 * @throws IOException
-	 *             Thrown if the given source/sink file could not be read.
-	 * @throws XmlPullParserException
-	 *             Thrown if the Android manifest file could not be read.
+	 * @throws IOException            Thrown if the given source/sink file could not
+	 *                                be read.
+	 * @throws XmlPullParserException Thrown if the Android manifest file could not
+	 *                                be read.
 	 */
 	private void parseAppResources() throws IOException, XmlPullParserException {
 		// To look for callbacks, we need to start somewhere. We use the Android
@@ -190,18 +190,17 @@ public class AndroidApplication {
 	}
 
 	/**
-	 * Calculates the sets of sources, sinks, entry points, and callbacks methods for the entry point in the given APK
-	 * file.
+	 * Calculates the sets of sources, sinks, entry points, and callbacks methods
+	 * for the entry point in the given APK file.
 	 *
-	 * @param sourcesAndSinks
-	 *            A provider from which the analysis can obtain the list of sources and sinks
-	 * @param entryPoint
-	 *            The entry point for which to calculate the callbacks. Pass null to calculate callbacks for all entry
-	 *            points.
-	 * @throws IOException
-	 *             Thrown if the given source/sink file could not be read.
-	 * @throws XmlPullParserException
-	 *             Thrown if the Android manifest file could not be read.
+	 * @param sourcesAndSinks A provider from which the analysis can obtain the list
+	 *                        of sources and sinks
+	 * @param entryPoint      The entry point for which to calculate the callbacks.
+	 *                        Pass null to calculate callbacks for all entry points.
+	 * @throws IOException            Thrown if the given source/sink file could not
+	 *                                be read.
+	 * @throws XmlPullParserException Thrown if the Android manifest file could not
+	 *                                be read.
 	 */
 	private void calculateCallbacks(SootClass entryPoint) throws IOException, XmlPullParserException {
 		// Add the callback methods
@@ -270,15 +269,13 @@ public class AndroidApplication {
 	}
 
 	/**
-	 * Calculates the set of callback methods declared in the XML resource files or the app's source code
+	 * Calculates the set of callback methods declared in the XML resource files or
+	 * the app's source code
 	 *
-	 * @param lfp
-	 *            The layout file parser to be used for analyzing UI controls
-	 * @param component
-	 *            The Android component for which to compute the callbacks. Pass null to compute callbacks for all
-	 *            components.
-	 * @throws IOException
-	 *             Thrown if a required configuration cannot be read
+	 * @param lfp       The layout file parser to be used for analyzing UI controls
+	 * @param component The Android component for which to compute the callbacks.
+	 *                  Pass null to compute callbacks for all components.
+	 * @throws IOException Thrown if a required configuration cannot be read
 	 */
 	private void calculateCallbackMethods(LayoutFileParser lfp, SootClass component) throws IOException {
 		// Load the APK file
@@ -451,8 +448,7 @@ public class AndroidApplication {
 	/**
 	 * Inverts the given {@link MultiMap}. The keys become values and vice versa
 	 *
-	 * @param original
-	 *            The map to invert
+	 * @param original The map to invert
 	 * @return An inverted copy of the given map
 	 */
 	private <K, V> MultiMap<K, V> invertMap(MultiMap<V, K> original) {
@@ -474,13 +470,14 @@ public class AndroidApplication {
 	}
 
 	/**
-	 * Collects the XML-based callback methods, e.g., Button.onClick() declared in layout XML files
+	 * Collects the XML-based callback methods, e.g., Button.onClick() declared in
+	 * layout XML files
 	 *
-	 * @param lfp
-	 *            The layout file parser
-	 * @param jimpleClass
-	 *            The analysis class that gives us a mapping between layout IDs and components
-	 * @return True if at least one new callback method has been added, otherwise false
+	 * @param lfp         The layout file parser
+	 * @param jimpleClass The analysis class that gives us a mapping between layout
+	 *                    IDs and components
+	 * @return True if at least one new callback method has been added, otherwise
+	 *         false
 	 */
 	private boolean collectXmlBasedCallbackMethods(LayoutFileParser lfp, AbstractCallbackAnalyzer jimpleClass) {
 		// Collect the XML-based callback methods
@@ -550,16 +547,14 @@ public class AndroidApplication {
 	}
 
 	/**
-	 * Calculates the set of callback methods declared in the XML resource files or the app's source code. This method
-	 * prefers performance over precision and scans the code including unreachable methods.
+	 * Calculates the set of callback methods declared in the XML resource files or
+	 * the app's source code. This method prefers performance over precision and
+	 * scans the code including unreachable methods.
 	 *
-	 * @param lfp
-	 *            The layout file parser to be used for analyzing UI controls
-	 * @param entryPoint
-	 *            The entry point for which to calculate the callbacks. Pass null to calculate callbacks for all entry
-	 *            points.
-	 * @throws IOException
-	 *             Thrown if a required configuration cannot be read
+	 * @param lfp        The layout file parser to be used for analyzing UI controls
+	 * @param entryPoint The entry point for which to calculate the callbacks. Pass
+	 *                   null to calculate callbacks for all entry points.
+	 * @throws IOException Thrown if a required configuration cannot be read
 	 */
 	private void calculateCallbackMethodsFast(LayoutFileParser lfp, SootClass component) throws IOException {
 		// We need a running Soot instance
@@ -599,12 +594,12 @@ public class AndroidApplication {
 	}
 
 	/**
-	 * Registers the callback methods in the given layout control so that they are included in the dummy main method
+	 * Registers the callback methods in the given layout control so that they are
+	 * included in the dummy main method
 	 *
-	 * @param callbackClass
-	 *            The class with which to associate the layout callbacks
-	 * @param lc
-	 *            The layout control whose callbacks are to be associated with the given class
+	 * @param callbackClass The class with which to associate the layout callbacks
+	 * @param lc            The layout control whose callbacks are to be associated
+	 *                      with the given class
 	 */
 	private void registerCallbackMethodsForView(SootClass callbackClass, LayoutControl lc) {
 		// Ignore system classes
@@ -640,11 +635,11 @@ public class AndroidApplication {
 	}
 
 	/**
-	 * Creates the main method based on the current callback information, injects it into the Soot scene.
+	 * Creates the main method based on the current callback information, injects it
+	 * into the Soot scene.
 	 *
-	 * @param The
-	 *            class name of a component to create a main method containing only that component, or null to create
-	 *            main method for all components
+	 * @param The class name of a component to create a main method containing only
+	 *            that component, or null to create main method for all components
 	 */
 	private void createMainMethod(SootClass component) {
 		// Always update the entry point creator to reflect the newest set
@@ -673,10 +668,11 @@ public class AndroidApplication {
 	}
 
 	/**
-	 * Initializes soot for running the soot-based phases of the application metadata analysis
+	 * Initializes soot for running the soot-based phases of the application
+	 * metadata analysis
 	 *
-	 * @param constructCallgraph
-	 *            True if a callgraph shall be constructed, otherwise false
+	 * @param constructCallgraph True if a callgraph shall be constructed, otherwise
+	 *                           false
 	 */
 	private void initializeSoot(boolean constructCallgraph) {
 		// Clean up any old Soot instance we may have
@@ -747,16 +743,17 @@ public class AndroidApplication {
 		PackManager.v().getPack("wjpp").apply();
 
 		// Patch the callgraph to support additional edges. We do this now,
-		// because during callback discovery, the context-insensitive callgraph algorithm would
+		// because during callback discovery, the context-insensitive callgraph
+		// algorithm would
 		// flood us with invalid edges.
 		LibraryClassPatcher patcher = new LibraryClassPatcher();
 		patcher.patchLibraries();
 	}
 
 	/**
-	 * Constructs a callgraph only without running the actual data flow analysis. If you want to run a data flow
-	 * analysis, do not call this method. Instead, call runInfoflow() directly, which will take care all necessary
-	 * prerequisites.
+	 * Constructs a callgraph only without running the actual data flow analysis. If
+	 * you want to run a data flow analysis, do not call this method. Instead, call
+	 * runInfoflow() directly, which will take care all necessary prerequisites.
 	 */
 	public void constructCallgraph() {
 		config.setTaintAnalysisEnabled(false);
@@ -829,7 +826,8 @@ public class AndroidApplication {
 	}
 
 	/**
-	 * Specialized {@link Infoflow} class that allows the data flow analysis to be run inside an existing Soot instance
+	 * Specialized {@link Infoflow} class that allows the data flow analysis to be
+	 * run inside an existing Soot instance
 	 *
 	 * @author Steven Arzt
 	 *
@@ -865,13 +863,14 @@ public class AndroidApplication {
 	}
 
 	/**
-	 * Creates the {@link AndroidEntryPointCreator} instance which will later create the dummy main method for the
-	 * analysis
+	 * Creates the {@link AndroidEntryPointCreator} instance which will later create
+	 * the dummy main method for the analysis
 	 *
-	 * @param component
-	 *            The single component to include in the dummy main method. Pass null to include all components in the
-	 *            dummy main method.
-	 * @return The {@link AndroidEntryPointCreator} responsible for generating the dummy main method
+	 * @param component The single component to include in the dummy main method.
+	 *                  Pass null to include all components in the dummy main
+	 *                  method.
+	 * @return The {@link AndroidEntryPointCreator} responsible for generating the
+	 *         dummy main method
 	 */
 	private AndroidEntryPointCreator createEntryPointCreator(SootClass component) {
 		Set<SootClass> components = getComponentsToAnalyze(component);
@@ -901,12 +900,12 @@ public class AndroidApplication {
 	}
 
 	/**
-	 * Gets the components to analyze. If the given component is not null, we assume that only this component and the
-	 * application class (if any) shall be analyzed. Otherwise, all components are to be analyzed.
+	 * Gets the components to analyze. If the given component is not null, we assume
+	 * that only this component and the application class (if any) shall be
+	 * analyzed. Otherwise, all components are to be analyzed.
 	 *
-	 * @param component
-	 *            A component class name to only analyze this class and the application class (if any), or null to
-	 *            analyze all classes.
+	 * @param component A component class name to only analyze this class and the
+	 *                  application class (if any), or null to analyze all classes.
 	 * @return The set of classes to analyze
 	 */
 	private Set<SootClass> getComponentsToAnalyze(SootClass component) {
@@ -926,8 +925,9 @@ public class AndroidApplication {
 	}
 
 	/**
-	 * Gets the dummy main method that was used for the last callgraph construction. You need to run a data flow
-	 * analysis or call constructCallgraph() first, otherwise you will get a null result.
+	 * Gets the dummy main method that was used for the last callgraph construction.
+	 * You need to run a data flow analysis or call constructCallgraph() first,
+	 * otherwise you will get a null result.
 	 *
 	 * @return The dummy main method
 	 */

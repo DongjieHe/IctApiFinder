@@ -51,8 +51,8 @@ class IctAPIAnalysisTask implements Callable<StatUnit> {
 
 public class Main {
 	/**
-	 * @param args
-	 *            Program arguments. args[0] = path to apk-file or dir to a group apk-files.
+	 * @param args Program arguments. args[0] = path to apk-file or dir to a group
+	 *             apk-files.
 	 * @throws IOException
 	 */
 	public static void main(String[] args) throws IOException {

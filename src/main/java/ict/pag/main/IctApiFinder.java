@@ -64,7 +64,7 @@ public class IctApiFinder {
 	public IctApiFinder(String apkPath) {
 		config = new InfoflowAndroidConfiguration();
 		config.setUseExistingSootInstance(false);
-		String androidJarDir = ConfigMgr.v().getSdkDBDir();
+		String androidJarDir = ConfigMgr.v().getSdkDir();
 		app = new AndroidApplication(androidJarDir, apkPath);
 		app.setConfig(config);
 		sdkMgr = null;
@@ -76,7 +76,8 @@ public class IctApiFinder {
 		this.sdkMgr = sdkMgr;
 	}
 
-	// need to know which stmt in which method, and api set which there are likely to be visit.
+	// need to know which stmt in which method, and api set which there are likely
+	// to be visit.
 	public StatUnit runAnalysis(boolean fullDetail) {
 		logger.info("Start analysis " + app.getAppName() + "!");
 		logger.info("start constructing call graph for " + app.getAppName());
@@ -154,10 +155,9 @@ public class IctApiFinder {
 	/**
 	 * This method collect IfStmt Set and api used in APK file.
 	 *
-	 * @param ifStmtSet:
-	 *            all IfStmt relate to <android.os.Build$VERSION: int SDK_INT>
-	 * @param apiSet:
-	 *            all stmt that use an API from SDK.
+	 * @param ifStmtSet: all IfStmt relate to <android.os.Build$VERSION: int
+	 *        SDK_INT>
+	 * @param apiSet: all stmt that use an API from SDK.
 	 * @throws Exception
 	 */
 	private void preAnalysis(Map<Unit, Set<Integer>> ifStmt2Killing, Set<Unit> apiSet) throws Exception {
@@ -229,8 +229,8 @@ public class IctApiFinder {
 
 		logger.info("finish first-round pre-analysis...");
 		/**
-		 * the second time to traverse the whole apk classes. mainly collect IfStmt that with condition expr of concern
-		 * boolean or returnMethod.
+		 * the second time to traverse the whole apk classes. mainly collect IfStmt that
+		 * with condition expr of concern boolean or returnMethod.
 		 */
 		Map<SootMethod, Set<Value>> sm2vs = new HashMap<SootMethod, Set<Value>>();
 		for (SootClass sc : Scene.v().getApplicationClasses()) {
