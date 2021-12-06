@@ -15,18 +15,14 @@ import java.util.concurrent.Executors;
 import ict.pag.utils.FileOps;
 
 public class Executor {
-	private Map<String, String> environment;
-
-	public Executor(Map<String, String> env) {
-		this.environment = env;
-	}
+	private final Map<String, String> environment;
 
 	public Executor() {
 		this.environment = System.getenv();
 	}
 
 	public List<String> execute(String workingDirectory, String cmd) {
-		final List<String> retList = new ArrayList<String>();
+		final List<String> retList = new ArrayList<>();
 		ProcessBuilder pb = new ProcessBuilder("/bin/bash", "-c", cmd);
 		// Set bash environment.
 		Map<String, String> env = pb.environment();
@@ -38,8 +34,10 @@ public class Executor {
 			env.put("LB_PAGER_FORCE_START", "1");
 		} else {
 			env.putAll(this.environment);
+			if(!env.containsKey("JAVA_HOME")) {
+				env.put("JAVA_HOME", "/usr/local/java/jdk8");
+			}
 		}
-
 		// Set Working Directory.
 		if (workingDirectory != null) {
 			File cwd = FileOps.findDirOrThrow(workingDirectory, "Working directory is invalid: " + workingDirectory);
@@ -53,40 +51,33 @@ public class Executor {
 			final InputStream is = process.getInputStream();
 			ExecutorService executorService = Executors.newSingleThreadExecutor();
 			try {
-				executorService.submit(new Runnable() {
-					public void run() {
-						BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(is));
-						String line = null;
-						try {
-							while ((line = bufferedReader.readLine()) != null) {
-								retList.add(line.trim());
-							}
-						} catch (IOException e) {
-							e.printStackTrace();
+				executorService.submit(() -> {
+					BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(is));
+					String line;
+					try {
+						while ((line = bufferedReader.readLine()) != null) {
+							retList.add(line.trim());
 						}
+					} catch (IOException e) {
+						e.printStackTrace();
 					}
-
 				}).get();
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			} catch (ExecutionException e) {
+			} catch (InterruptedException | ExecutionException e) {
 				e.printStackTrace();
 			} finally {
 				executorService.shutdown();
 			}
 			int returnCode = process.waitFor();
 			if (returnCode != 0) {
-				throw new RuntimeException("Command exited with non-zero (" + returnCode + ") status:\n " + cmd);
+				for(String s : retList) {
+					System.out.println(s);
+				}
+				throw new RuntimeException("Command exited with non-zero status:\n " + cmd);
 			}
-		} catch (IOException e) {
-			e.printStackTrace();
-		} catch (InterruptedException e) {
+		} catch (IOException | InterruptedException e) {
 			e.printStackTrace();
 		}
 		return retList;
 	}
 
-	public List<String> execute(String cmd) {
-		return execute(null, cmd);
-	}
 }

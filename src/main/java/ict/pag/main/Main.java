@@ -23,10 +23,10 @@ import ict.pag.global.ConfigMgr;
 import ict.pag.utils.CodeTimer;
 
 class IctAPIAnalysisTask implements Callable<StatUnit> {
-	private String mPath;
-	private SdkAPIMgr mSdkMgr;
-	private boolean mDetail;
-	private CodeTimer codeTimer;
+	private final String mPath;
+	private final SdkAPIMgr mSdkMgr;
+	private final boolean mDetail;
+	private final CodeTimer codeTimer;
 
 	public IctAPIAnalysisTask(String path, SdkAPIMgr sdkMgr, boolean detail) {
 		mPath = path;
@@ -36,7 +36,7 @@ class IctAPIAnalysisTask implements Callable<StatUnit> {
 	}
 
 	@Override
-	public StatUnit call() throws Exception {
+	public StatUnit call() {
 		codeTimer.startTimer();
 		IctApiFinder can = new IctApiFinder(mPath);
 		can.setSdkMgr(mSdkMgr);
@@ -51,9 +51,8 @@ class IctAPIAnalysisTask implements Callable<StatUnit> {
 
 public class Main {
 	/**
-	 * @param args Program arguments. args[0] = path to apk-file or dir to a group
-	 *             apk-files.
-	 * @throws IOException
+	 * @param args
+	 *            Program arguments. args[0] = path to apk-file or dir to a group apk-files.
 	 */
 	public static void main(String[] args) throws IOException {
 		if (args.length != 1) {
@@ -74,11 +73,11 @@ public class Main {
 		File file = new File(args[0]);
 
 		if (file.isDirectory()) {
-			Set<String> alreadyCalc = new HashSet<String>();
+			Set<String> alreadyCalc = new HashSet<>();
 			BufferedReader reader = new BufferedReader(new FileReader(outputFile));
-			String line = null;
+			String line;
 			while ((line = reader.readLine()) != null) {
-				String fields[] = line.split(",");
+				String[] fields = line.split(",");
 				assert fields.length == 7;
 				int time = Integer.parseInt(fields[6]);
 				if (time != -1) {
@@ -112,7 +111,7 @@ public class Main {
 				logger.error("args[0] should be an apk file!");
 			} else {
 				StatUnit runTime = runAnalysis(file.getAbsolutePath(), sdkMgr, true);
-				logger.info(args[0] + ": " + runTime.toString());
+				logger.info(args[0] + ": " + runTime);
 			}
 		}
 
@@ -123,18 +122,12 @@ public class Main {
 	private static StatUnit runAnalysis(String path, SdkAPIMgr sdkMgr, boolean detail) {
 		ExecutorService executor = Executors.newSingleThreadExecutor();
 		Callable<StatUnit> callable = new IctAPIAnalysisTask(path, sdkMgr, detail);
-		FutureTask<StatUnit> future = new FutureTask<StatUnit>(callable);
+		FutureTask<StatUnit> future = new FutureTask<>(callable);
 		executor.execute(future);
 		StatUnit result = null;
 		try {
 			result = future.get(5, TimeUnit.MINUTES);
-		} catch (InterruptedException e) {
-			future.cancel(true);
-			e.printStackTrace();
-		} catch (ExecutionException e) {
-			future.cancel(true);
-			e.printStackTrace();
-		} catch (TimeoutException e) {
+		} catch (InterruptedException | ExecutionException | TimeoutException e) {
 			future.cancel(true);
 			e.printStackTrace();
 		} finally {

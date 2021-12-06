@@ -5,7 +5,7 @@ apply plugin: 'application'
 group = 'ict.pag'
 version = '0.0.1-SNAPSHOT'
 
-description = """APICompatFinder"""
+description = """IctAPIFinder"""
 
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
@@ -15,10 +15,13 @@ tasks.withType(JavaCompile) {
 
 // In this section you declare where to find the dependencies of your project
 repositories {
-	maven { url "https://soot-build.cs.uni-paderborn.de/nexus/repository/soot-snapshot" }
-    maven { url "https://soot-build.cs.uni-paderborn.de/nexus/repository/soot-release" }
-    maven { url "http://repo.maven.apache.org/maven2" }
     mavenCentral()
+    maven {
+        url "https://repo.maven.apache.org/maven2"
+    }
+    flatDir {
+        dirs 'libs'
+    }
 }
 
 eclipse {
@@ -30,17 +33,20 @@ eclipse {
 
 tasks.withType(JavaExec) {
     enableAssertions = true
-    jvmArgs = ['-Xmx16g']
+    jvmArgs = ['-Xmx64g']
 }
 
 dependencies {
-	compile "ca.mcgill.sable:soot:3.0.0-SNAPSHOT"
-    compile "ca.mcgill.sable:jasmin:2.5.0-SNAPSHOT"
-    compile "heros:heros:0.0.1-SNAPSHOT"
-    compile "de.tud.sse:soot-infoflow:2.0.0-SNAPSHOT"
-    compile "de.tud.sse:soot-infoflow-android:2.0.0-SNAPSHOT"
-	compile group: 'org.json', name: 'json', version: '20171018'
-	compile group: 'commons-io', name: 'commons-io', version: '2.6'
+    implementation files("${rootDir}/libs/soot-infoflow-cmd-2.9.0-jar-with-dependencies.jar")
+//    compile "ca.mcgill.sable:soot:3.0.0-SNAPSHOT"
+//    compile "ca.mcgill.sable:jasmin:2.5.0-SNAPSHOT"
+//    compile "heros:heros:0.0.1-SNAPSHOT"
+//    compile "de.tud.sse:soot-infoflow:2.0.0-SNAPSHOT"
+//    compile "de.tud.sse:soot-infoflow-android:2.0.0-SNAPSHOT"
+//    compile group: 'org.json', name: 'json', version: '20171018'
+//    compile group: 'commons-io', name: 'commons-io', version: '2.6'
+    implementation 'org.json:json:20210307'
+    implementation 'commons-io:commons-io:2.11.0'
 }
 
 mainClassName = "ict.pag.main.Main"
@@ -54,7 +60,7 @@ run {
 task runMain(type: JavaExec) {
 	main = "ict.pag.main.Main"
 	classpath = sourceSets.main.runtimeClasspath
-    // args = ["/home/hedj/Desktop/app-debug.apk"]
-    args = ["/home/hedj/fdroidNewest/"]
+    args = ["/home/hedj/Work/IctApiFinder/IctApiFinder/Benchmarks/org.servalproject_2371.apk"]
+    // args = ["/home/hedj/Work/IctApiFinder/IctApiFinder/Benchmarks/"]
 }
 

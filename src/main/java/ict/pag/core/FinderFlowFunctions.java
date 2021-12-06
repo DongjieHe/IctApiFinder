@@ -26,7 +26,7 @@ public class FinderFlowFunctions implements FlowFunctions<Unit, FinderFact, Soot
 	@Override
 	public FlowFunction<FinderFact> getReturnFlowFunction(Unit callSite, SootMethod calleeMethod, Unit exitStmt,
 			Unit returnSite) {
-		return new FinderReturnFlowFunction(callSite, calleeMethod, exitStmt, returnSite);
+		return new FinderReturnFlowFunction();
 	}
 
 	@Override

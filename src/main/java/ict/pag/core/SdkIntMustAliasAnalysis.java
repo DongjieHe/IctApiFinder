@@ -12,8 +12,6 @@ import soot.toolkits.scalar.ForwardFlowAnalysis;
 
 public class SdkIntMustAliasAnalysis extends ForwardFlowAnalysis<Unit, HashSet<Value>> {
 
-	private final String target = "<android.os.Build$VERSION: int SDK_INT>";
-
 	public SdkIntMustAliasAnalysis(DirectedGraph<Unit> graph) {
 		super(graph);
 		doAnalysis();
@@ -31,6 +29,7 @@ public class SdkIntMustAliasAnalysis extends ForwardFlowAnalysis<Unit, HashSet<V
 			} else if (right instanceof StaticFieldRef) {
 				StaticFieldRef ref = (StaticFieldRef) right;
 				String fieldSig = ref.getField().getSignature();
+				String target = "<android.os.Build$VERSION: int SDK_INT>";
 				if (fieldSig.equals(target)) {
 					out.add(right);
 					out.add(left);
@@ -45,7 +44,7 @@ public class SdkIntMustAliasAnalysis extends ForwardFlowAnalysis<Unit, HashSet<V
 
 	@Override
 	protected HashSet<Value> newInitialFlow() {
-		return new HashSet<Value>();
+		return new HashSet<>();
 	}
 
 	@Override

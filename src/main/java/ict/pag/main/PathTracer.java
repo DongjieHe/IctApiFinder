@@ -13,14 +13,14 @@ import soot.Unit;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 
 public class PathTracer {
-	private BiDiInterproceduralCFG<Unit, SootMethod> icfg;
-	private SootMethod currMethod;
-	private List<List<SootMethod>> possibleCallStack;
+	private final BiDiInterproceduralCFG<Unit, SootMethod> icfg;
+	private final SootMethod currMethod;
+	private final List<List<SootMethod>> possibleCallStack;
 
 	public PathTracer(BiDiInterproceduralCFG<Unit, SootMethod> cfg, Unit unit) {
 		icfg = cfg;
 		currMethod = icfg.getMethodOf(unit);
-		possibleCallStack = new ArrayList<List<SootMethod>>();
+		possibleCallStack = new ArrayList<>();
 	}
 
 	private void traceHelper(Stack<SootMethod> stack, Set<SootMethod> visit, Set<SootMethod> entrySet) {
@@ -33,8 +33,8 @@ public class PathTracer {
 		SootMethod top = stack.peek();
 		if (entrySet.contains(top)) {
 			// find one path
-			Stack<SootMethod> callStack = new Stack<SootMethod>();
-			List<SootMethod> callStack2 = new ArrayList<SootMethod>();
+			Stack<SootMethod> callStack = new Stack<>();
+			List<SootMethod> callStack2 = new ArrayList<>();
 			while (!stack.isEmpty()) {
 				SootMethod sm = stack.pop();
 				callStack.push(sm);
@@ -70,9 +70,9 @@ public class PathTracer {
 
 	public void trace() {
 		List<SootMethod> entrySm = Scene.v().getEntryPoints();
-		Set<SootMethod> entrySet = new HashSet<SootMethod>(entrySm);
-		Set<SootMethod> visit = new HashSet<SootMethod>();
-		Stack<SootMethod> stack = new Stack<SootMethod>();
+		Set<SootMethod> entrySet = new HashSet<>(entrySm);
+		Set<SootMethod> visit = new HashSet<>();
+		Stack<SootMethod> stack = new Stack<>();
 		stack.push(currMethod);
 		traceHelper(stack, visit, entrySet);
 	}

@@ -4,8 +4,8 @@ import soot.Unit;
 import soot.jimple.infoflow.solver.fastSolver.FastSolverLinkedNode;
 
 public class FinderFact implements FastSolverLinkedNode<FinderFact, Unit> {
-	private int level;
-	private static FinderFact zeroValue = new FinderFact(-1);
+	private final int level;
+	private static final FinderFact zeroValue = new FinderFact(-1);
 
 	public FinderFact(int lv) {
 		level = lv;
@@ -32,27 +32,23 @@ public class FinderFact implements FastSolverLinkedNode<FinderFact, Unit> {
 		if (getClass() != obj.getClass())
 			return false;
 		FinderFact other = (FinderFact) obj;
-		if (level != other.level)
-			return false;
-		return true;
+		return level == other.level;
 	}
 
 	@Override
 	public FinderFact clone() {
-		FinderFact abs = new FinderFact(this.level);
-		return abs;
+		return new FinderFact(this.level);
 	}
 
 	@Override
-	public void addNeighbor(FinderFact originalAbstraction) {
+	public boolean addNeighbor(FinderFact originalAbstraction) {
 		// TODO Auto-generated method stub
-
+		return false;
 	}
 
 	@Override
-	public void setCallingContext(FinderFact callingContext) {
-		// TODO Auto-generated method stub
-
+	public int getNeighborCount() {
+		return 0;
 	}
 
 	@Override
@@ -71,6 +67,11 @@ public class FinderFact implements FastSolverLinkedNode<FinderFact, Unit> {
 	public FinderFact getActiveCopy() {
 		// TODO Auto-generated method stub
 		return null;
+	}
+
+	@Override
+	public int getPathLength() {
+		return 0;
 	}
 
 	public int getLevel() {

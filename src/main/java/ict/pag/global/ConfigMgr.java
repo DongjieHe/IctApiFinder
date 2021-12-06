@@ -1,6 +1,5 @@
 package ict.pag.global;
 
-import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 
@@ -9,20 +8,18 @@ import org.json.JSONObject;
 import org.json.JSONTokener;
 
 public class ConfigMgr {
-	private String sdkDir = null;
 	private String sdkDBDir = null;
 	private int minSdkVersion;
 	private int maxSdkVersion;
+	private String platforms = null;
 	private String outputDir = null;
-	private String testSetDir = null;
 
 	private void loadFromConfigFile() {
 		try {
-			JSONObject jsonObj = new JSONObject(new JSONTokener(new FileReader(new File("data/config.json"))));
-			sdkDir = jsonObj.getString("SDK_DIR").toString();
-			sdkDBDir = jsonObj.getString("SDK_DB_DIR").toString();
-			outputDir = jsonObj.getString("OUT_DIR").toString();
-			testSetDir = jsonObj.getString("APK_TEST_SET").toString();
+			JSONObject jsonObj = new JSONObject(new JSONTokener(new FileReader("data/config.json")));
+			sdkDBDir = jsonObj.getString("SDK_DB_DIR");
+			platforms = jsonObj.getString("PLATFORMS");
+			outputDir = jsonObj.getString("OUT_DIR");
 			minSdkVersion = jsonObj.getInt("MIN_SDK_VERSION");
 			maxSdkVersion = jsonObj.getInt("MAX_SDK_VERSION");
 		} catch (JSONException | FileNotFoundException e1) {
@@ -41,12 +38,12 @@ public class ConfigMgr {
 		return G.v().get_ConfigMgr();
 	}
 
-	public String getSdkDir() {
-		return sdkDir;
-	}
-
 	public String getSdkDBDir() {
 		return sdkDBDir;
+	}
+
+	public String getPlatforms() {
+		return platforms;
 	}
 
 	public int getMinSdkVersion() {
@@ -61,7 +58,4 @@ public class ConfigMgr {
 		return outputDir;
 	}
 
-	public String getTestSetDir() {
-		return testSetDir;
-	}
 }

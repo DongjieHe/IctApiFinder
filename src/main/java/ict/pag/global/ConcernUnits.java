@@ -19,7 +19,7 @@ public class ConcernUnits {
 		}
 		unit2kill = null;
 		apis = null;
-		api2live = new HashMap<Unit, Set<Integer>>();
+		api2live = new HashMap<>();
 	}
 
 	public static ConcernUnits v() {
@@ -28,10 +28,6 @@ public class ConcernUnits {
 
 	public static void reset() {
 		G.v().release_ConcernUnits();
-	}
-
-	public Map<Unit, Set<Integer>> getUnitToKillMap() {
-		return unit2kill;
 	}
 
 	public void setUnitToKillMap(Map<Unit, Set<Integer>> uk) {
@@ -46,10 +42,6 @@ public class ConcernUnits {
 		return unit2kill.get(u);
 	}
 
-	public Set<Unit> getApiSet() {
-		return apis;
-	}
-
 	public void setApiSet(Set<Unit> apis) {
 		this.apis = apis;
 	}
@@ -62,7 +54,7 @@ public class ConcernUnits {
 		if (this.api2live.containsKey(unit)) {
 			this.api2live.get(unit).add(level);
 		} else {
-			Set<Integer> liveLevels = new HashSet<Integer>();
+			Set<Integer> liveLevels = new HashSet<>();
 			liveLevels.add(level);
 			this.api2live.put(unit, liveLevels);
 		}

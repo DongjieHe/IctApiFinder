@@ -9,14 +9,16 @@ import soot.Unit;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 
 public class FinderCallFlowFunction implements FlowFunction<FinderFact> {
+	private Unit mCallStmt;
 
 	public FinderCallFlowFunction(Unit callStmt, SootMethod destinationMethod,
 			BiDiInterproceduralCFG<Unit, SootMethod> icfg) {
+		mCallStmt = callStmt;
 	}
 
 	@Override
 	public Set<FinderFact> computeTargets(FinderFact source) {
-		Set<FinderFact> retSet = new HashSet<FinderFact>();
+		Set<FinderFact> retSet = new HashSet<>();
 		retSet.add(source);
 		return retSet;
 	}

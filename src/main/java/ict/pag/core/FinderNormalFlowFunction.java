@@ -1,6 +1,7 @@
 package ict.pag.core;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import heros.FlowFunction;
@@ -15,8 +16,8 @@ import soot.jimple.internal.JIfStmt;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 
 public class FinderNormalFlowFunction implements FlowFunction<FinderFact> {
-	private Unit mCurr;
-	private Unit mSucc;
+	private final Unit mCurr;
+	private final Unit mSucc;
 	BiDiInterproceduralCFG<Unit, SootMethod> mInterCFG;
 
 	public FinderNormalFlowFunction(Unit curr, Unit succ, BiDiInterproceduralCFG<Unit, SootMethod> icfg) {
@@ -27,7 +28,7 @@ public class FinderNormalFlowFunction implements FlowFunction<FinderFact> {
 
 	@Override
 	public Set<FinderFact> computeTargets(FinderFact source) {
-		Set<FinderFact> retSet = new HashSet<FinderFact>();
+		Set<FinderFact> retSet = new HashSet<>();
 		if (ConcernUnits.v().containIfStmt(mCurr)) {
 			JIfStmt stmt = (JIfStmt) mCurr;
 			Unit tgt = stmt.getTarget();

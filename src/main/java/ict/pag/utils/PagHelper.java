@@ -20,15 +20,14 @@ import soot.jimple.internal.JNeExpr;
 public class PagHelper {
 
 	public static void listSetElements(Set<?> set) {
-		Iterator<?> it = set.iterator();
-		while (it.hasNext()) {
-			System.out.println(it.next());
+		for (Object o : set) {
+			System.out.println(o);
 		}
 	}
 
 	public static void showListElements(List<?> list) {
-		for (int i = 0; i < list.size(); ++i) {
-			System.out.println(list.get(i));
+		for (Object o : list) {
+			System.out.println(o);
 		}
 	}
 
@@ -43,14 +42,14 @@ public class PagHelper {
 	 * Our Concern Expression should be in this format: "SDK_INT op CONSTANT".
 	 */
 	public static boolean isConcernExpr(Value cond, HashSet<Value> vs) {
-		boolean flag = false;
-		flag |= (cond instanceof JGtExpr);
+		boolean flag;
+		flag = (cond instanceof JGtExpr);
 		flag |= (cond instanceof JGeExpr);
 		flag |= (cond instanceof JEqExpr);
 		flag |= (cond instanceof JNeExpr);
 		flag |= (cond instanceof JLeExpr);
 		flag |= (cond instanceof JLtExpr);
-		if (flag == false) {
+		if (!flag) {
 			return false;
 		} else {
 			AbstractJimpleIntBinopExpr jbe = (AbstractJimpleIntBinopExpr) cond;
@@ -58,17 +57,14 @@ public class PagHelper {
 			Value v2 = jbe.getOp2();
 			if (vs.contains(v1) && v2 instanceof IntConstant) {
 				return true;
-			} else if (vs.contains(v2) && v1 instanceof IntConstant) {
-				return true;
-			}
+			} else return vs.contains(v2) && v1 instanceof IntConstant;
 		}
-		return false;
 	}
 
 	public static Set<Integer> fetchKillingSet(Value expr) {
 		int mMinVersion = ConfigMgr.v().getMinSdkVersion();
 		int mMaxVersion = ConfigMgr.v().getMaxSdkVersion();
-		Set<Integer> ret = new HashSet<Integer>();
+		Set<Integer> ret = new HashSet<>();
 		AbstractJimpleIntBinopExpr cond = (AbstractJimpleIntBinopExpr) expr;
 		Value op1 = cond.getOp1();
 		Value op2 = cond.getOp2();

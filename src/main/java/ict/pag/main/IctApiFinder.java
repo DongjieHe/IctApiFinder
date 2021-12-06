@@ -4,10 +4,10 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -56,51 +56,56 @@ import soot.toolkits.graph.BriefUnitGraph;
 public class IctApiFinder {
 	private static InfoflowAndroidConfiguration config;
 	private final Logger logger = LoggerFactory.getLogger(getClass());
-	private AndroidApplication app;
+	private final AndroidApplication app;
 	private BiDiInterproceduralCFG<Unit, SootMethod> icfg;
 	private SdkAPIMgr sdkMgr;
-	private CodeTimer codeTimer;
+	private final CodeTimer codeTimer;
+	private final String apkPath;
 
 	public IctApiFinder(String apkPath) {
 		config = new InfoflowAndroidConfiguration();
-		config.setUseExistingSootInstance(false);
-		String androidJarDir = ConfigMgr.v().getSdkDir();
+//		config.setUseExistingSootInstance(false);
+		String androidJarDir = ConfigMgr.v().getPlatforms();
+		System.out.println(androidJarDir + ";;;");
 		app = new AndroidApplication(androidJarDir, apkPath);
-		app.setConfig(config);
+//		app.setConfig(config);
 		sdkMgr = null;
 		icfg = null;
+		this.apkPath = apkPath;
 		codeTimer = new CodeTimer();
+	}
+
+	public String getAppName() {
+		return apkPath.substring(apkPath.lastIndexOf("/") + 1);
 	}
 
 	public void setSdkMgr(SdkAPIMgr sdkMgr) {
 		this.sdkMgr = sdkMgr;
 	}
 
-	// need to know which stmt in which method, and api set which there are likely
-	// to be visit.
+	// need to know which stmt in which method, and api set which there are likely to be visit.
 	public StatUnit runAnalysis(boolean fullDetail) {
-		logger.info("Start analysis " + app.getAppName() + "!");
-		logger.info("start constructing call graph for " + app.getAppName());
+		logger.info("Start analysis " + getAppName() + "!");
+		logger.info("start constructing call graph for " + getAppName());
 		StatUnit su = new StatUnit();
 
 		codeTimer.startTimer();
 		app.constructCallgraph();
 		icfg = new JimpleBasedInterproceduralCFG(config.getEnableExceptionTracking(), true);
-		IFDSTabulationProblem<Unit, FinderFact, SootMethod, BiDiInterproceduralCFG<Unit, SootMethod>> finderProblem = new FinderProblem(
-				icfg);
+		FinderProblem finderProblem = new FinderProblem(icfg);
 		codeTimer.stopTimer();
 		su.setIcfg(codeTimer.getExecutionTime());
-		logger.info("finish building icfg for " + app.getAppName());
-		// ((FinderProblem) finderProblem).setThreadsNum(1);
+		logger.info("finish building icfg for " + getAppName());
+		finderProblem.setThreadNums(1);
 
 		logger.info("Running pre-analysis...");
 		codeTimer.startTimer();
-		Map<Unit, Set<Integer>> ifStmt2Killing = new HashMap<Unit, Set<Integer>>();
-		Set<Unit> apiSet = new HashSet<Unit>();
+		Map<Unit, Set<Integer>> ifStmt2Killing = new HashMap<>();
+		Set<Unit> apiSet = new HashSet<>();
 		try {
 			preAnalysis(ifStmt2Killing, apiSet);
 		} catch (Exception e) {
-			logger.error("fail to pre-analysis " + app.getAppName() + "!!!");
+			logger.error("fail to pre-analysis " + getAppName() + "!!!");
 			e.printStackTrace();
 		}
 		ConcernUnits.v().setUnitToKillMap(ifStmt2Killing);
@@ -110,7 +115,7 @@ public class IctApiFinder {
 
 		logger.info("Setting initial seeds...");
 		codeTimer.startTimer();
-		Set<FinderFact> initialSeeds = new HashSet<FinderFact>();
+		Set<FinderFact> initialSeeds = new HashSet<>();
 		for (int i = ConfigMgr.v().getMinSdkVersion(); i <= ConfigMgr.v().getMaxSdkVersion(); ++i) {
 			FinderFact finderFact = new FinderFact(i);
 			initialSeeds.add(finderFact);
@@ -120,14 +125,14 @@ public class IctApiFinder {
 		for (SootMethod sm : entryPoints) {
 			Collection<Unit> startPoints = icfg.getStartPointsOf(sm);
 			for (Unit u : startPoints) {
-				((FinderProblem) finderProblem).addInitialSeeds(u, initialSeeds);
+				finderProblem.addInitialSeeds(u, initialSeeds);
 				logger.info("entry: " + u);
 			}
 		}
 
 		logger.info("Running data flow analysis...");
 		FinderSolver finderSolver = new FinderSolver(finderProblem);
-		finderSolver.setEnableMergePointChecking(true);
+//		finderSolver.setEnableMergePointChecking(true);
 		finderSolver.solve();
 		codeTimer.stopTimer();
 		su.setIfds(codeTimer.getExecutionTime());
@@ -138,16 +143,14 @@ public class IctApiFinder {
 		try {
 			bugNum = checkAPICompatibility(fullDetail);
 		} catch (Exception e) {
-			logger.error("check API Compatibility in " + app.getAppName() + " failed!");
+			logger.error("check API Compatibility in " + getAppName() + " failed!");
 			e.printStackTrace();
 		}
 		codeTimer.stopTimer();
 		su.setCheckComp(codeTimer.getExecutionTime());
 		su.setBugNum(bugNum);
-		logger.info("finish analysis " + app.getAppName() + "!");
+		logger.info("finish analysis " + getAppName() + "!");
 		ConcernUnits.reset();
-		finderSolver = null;
-		finderProblem = null;
 		releaseCallgraph();
 		return su;
 	}
@@ -155,14 +158,13 @@ public class IctApiFinder {
 	/**
 	 * This method collect IfStmt Set and api used in APK file.
 	 *
-	 * @param ifStmtSet: all IfStmt relate to <android.os.Build$VERSION: int
-	 *        SDK_INT>
-	 * @param apiSet: all stmt that use an API from SDK.
-	 * @throws Exception
+	 * @param ifStmtSet:
+	 *            all IfStmt relate to <android.os.Build$VERSION: int SDK_INT>
+	 * @param apiSet:
+	 *            all stmt that use an API from SDK.
 	 */
-	private void preAnalysis(Map<Unit, Set<Integer>> ifStmt2Killing, Set<Unit> apiSet) throws Exception {
-		Map<Unit, Set<Integer>> bool2killing = new HashMap<Unit, Set<Integer>>();
-		Map<SootMethod, Set<Integer>> sm2killing = new HashMap<SootMethod, Set<Integer>>();
+	private void preAnalysis(Map<Unit, Set<Integer>> ifStmt2Killing, Set<Unit> apiSet) {
+		Map<SootMethod, Set<Integer>> sm2killing = new HashMap<>();
 		for (SootClass sc : Scene.v().getApplicationClasses()) {
 			if (sc.getName().startsWith("android.support")) {
 				continue;
@@ -191,7 +193,7 @@ public class IctApiFinder {
 					// collect SDK API
 					boolean flag = false;
 					if (stmt instanceof InvokeStmt) {
-						InvokeExpr expr = ((InvokeStmt) stmt).getInvokeExpr();
+						InvokeExpr expr = stmt.getInvokeExpr();
 						SootMethod callee = expr.getMethod();
 						flag = sdkMgr.containAPI(callee);
 					} else if (stmt instanceof AssignStmt) {
@@ -208,18 +210,13 @@ public class IctApiFinder {
 							String fieldSig = ref.getField().getSignature();
 							flag = sdkMgr.containAPI(fieldSig);
 						}
-
-						// collect concern bool expr;
-						if (PagHelper.isConcernExpr(right, flowBefore)) {
-							bool2killing.put(u, PagHelper.fetchKillingSet(right));
-						}
 					}
 					if (flag) {
 						apiSet.add(u);
 					}
 
 				} // for unit
-					// collect boolean {return SDK_INT op CNT;} methods.
+				// collect boolean {return SDK_INT op CNT;} methods.
 				BriefBlockGraph bg = new BriefBlockGraph(body);
 				// DotGraph dg = (new CFGToDotGraph()).drawCFG(bg, body);
 				// dg.plot(sm.getSignature() + ".dot");
@@ -228,11 +225,11 @@ public class IctApiFinder {
 		} // for class
 
 		logger.info("finish first-round pre-analysis...");
-		/**
-		 * the second time to traverse the whole apk classes. mainly collect IfStmt that
-		 * with condition expr of concern boolean or returnMethod.
+		/*
+		 * the second time to traverse the whole apk classes. mainly collect IfStmt that with condition expr of concern
+		 * boolean or returnMethod.
 		 */
-		Map<SootMethod, Set<Value>> sm2vs = new HashMap<SootMethod, Set<Value>>();
+		Map<SootMethod, Set<Value>> sm2vs = new HashMap<>();
 		for (SootClass sc : Scene.v().getApplicationClasses()) {
 			List<SootMethod> sms = sc.getMethods();
 			for (SootMethod sm : sms) {
@@ -253,7 +250,7 @@ public class IctApiFinder {
 								if (sm2vs.containsKey(callee)) {
 									sm2vs.get(callee).add(left);
 								} else {
-									Set<Value> tmp = new HashSet<Value>();
+									Set<Value> tmp = new HashSet<>();
 									tmp.add(left);
 									sm2vs.put(callee, tmp);
 								}
@@ -283,7 +280,7 @@ public class IctApiFinder {
 									} else {
 										int mMinVersion = ConfigMgr.v().getMinSdkVersion();
 										int mMaxVersion = ConfigMgr.v().getMaxSdkVersion();
-										finalSet = new HashSet<Integer>();
+										finalSet = new HashSet<>();
 										for (int i = mMinVersion; i <= mMaxVersion; ++i) {
 											if (!kSet.contains(i)) {
 												finalSet.add(i);
@@ -294,10 +291,6 @@ public class IctApiFinder {
 								}
 							}
 						}
-						// if(bool2killing.containsKey(cond)) {
-						// Set<Integer> killSet = bool2killing.get(cond);
-						// ifStmt2Killing.put(u, killSet);
-						// }
 					}
 				} // for unit
 			} // for method
@@ -305,23 +298,24 @@ public class IctApiFinder {
 	}
 
 	/**
-	 * check whether is our concern return method.
+	 * check whether is our concerning return method.
+	 * collect boolean {return SDK_INT op CNT;} methods.
 	 */
-	private boolean updateIfConcernReturnMethod(BriefBlockGraph bg, Map<Unit, Set<Integer>> if2kill,
-			Map<SootMethod, Set<Integer>> sm2killing) {
+	private void updateIfConcernReturnMethod(BriefBlockGraph bg, Map<Unit, Set<Integer>> if2kill,
+											 Map<SootMethod, Set<Integer>> sm2killing) {
 		SootMethod sm = bg.getBody().getMethod();
 		Type mType = sm.getReturnType();
 		boolean flag = mType instanceof BooleanType;
 		flag &= bg.getBlocks().size() == 3;
 		flag &= bg.getHeads().size() == 1;
-		if (flag == false) {
-			return false;
+		if (!flag) {
+			return;
 		}
 		Block head = bg.getHeads().get(0);
 		Unit tail = head.getTail();
 		List<Block> succBlks = head.getSuccs();
 		if (succBlks.size() != 2 || !if2kill.containsKey(tail)) {
-			return false;
+			return;
 		}
 
 		JIfStmt is = (JIfStmt) tail;
@@ -329,14 +323,14 @@ public class IctApiFinder {
 		Unit succTail1 = succBlks.get(0).getTail();
 		Unit succTail2 = succBlks.get(1).getTail();
 		if (!(succTail1 instanceof JReturnStmt) || !(succTail2 instanceof JReturnStmt)) {
-			return false;
+			return;
 		}
 		JReturnStmt jrStmt1 = (JReturnStmt) succTail1;
 		JReturnStmt jrStmt2 = (JReturnStmt) succTail2;
 		Value op1 = jrStmt1.getOp();
 		Value op2 = jrStmt2.getOp();
 		if (!(op1 instanceof IntConstant) || !(op2 instanceof IntConstant)) {
-			return false;
+			return;
 		}
 		IntConstant ic1 = (IntConstant) op1;
 		IntConstant ic2 = (IntConstant) op2;
@@ -346,7 +340,7 @@ public class IctApiFinder {
 		} else {
 			int mMinVersion = ConfigMgr.v().getMinSdkVersion();
 			int mMaxVersion = ConfigMgr.v().getMaxSdkVersion();
-			Set<Integer> mKilling = new HashSet<Integer>();
+			Set<Integer> mKilling = new HashSet<>();
 			for (int i = mMinVersion; i <= mMaxVersion; ++i) {
 				if (!killing.contains(i)) {
 					mKilling.add(i);
@@ -354,28 +348,22 @@ public class IctApiFinder {
 			}
 			sm2killing.put(sm, mKilling);
 		}
-		return true;
 	}
 
 	/**
-	 * Check whether this app contain API incompatibility problem.
+	 * Check whether this app contains API incompatibility problem.
 	 */
 	private int checkAPICompatibility(boolean fullDetail) throws Exception {
 		Map<Unit, Set<Integer>> api2live = ConcernUnits.v().getApi2live();
-		Set<BugUnit> bugReport = new HashSet<BugUnit>();
+		Set<BugUnit> bugReport = new HashSet<>();
+
 		int minSdkVersion = app.getMinSdkVersion();
-		// int maxSdkVersion = app.targetSdkVersion();
 		int maxSdkVersion = ConfigMgr.v().getMaxSdkVersion();
 		for (Entry<Unit, Set<Integer>> entry : api2live.entrySet()) {
 			Unit key = entry.getKey();
 			Set<Integer> liveLevels = entry.getValue();
 			// filter api level;
-			for (Iterator<Integer> it = liveLevels.iterator(); it.hasNext();) {
-				int level = it.next();
-				if (level > maxSdkVersion || level < minSdkVersion) {
-					it.remove();
-				}
-			}
+			liveLevels.removeIf(level -> level > maxSdkVersion || level < minSdkVersion);
 
 			if (key instanceof InvokeStmt) {
 				InvokeStmt ivk = (InvokeStmt) key;
@@ -427,12 +415,11 @@ public class IctApiFinder {
 		String outDir = ConfigMgr.v().getOutputDir();
 		String reportFile = outDir + File.separator + app.getAppName() + ".report";
 		FileOutputStream fos = new FileOutputStream(reportFile);
-		BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(fos, "UTF-8"));
+		BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(fos, StandardCharsets.UTF_8));
 		bw.write(app.getAppName() + " minSdkVersion: " + minSdkVersion + ", targetSdkVersion: " + maxSdkVersion);
 		bw.newLine();
 		bw.flush();
-		for (Iterator<BugUnit> it = bugReport.iterator(); it.hasNext();) {
-			BugUnit bugMsg = it.next();
+		for (BugUnit bugMsg : bugReport) {
 			bw.write(bugMsg.toString(fullDetail));
 			bw.newLine();
 		}
@@ -445,7 +432,7 @@ public class IctApiFinder {
 		if (!icfg.isReachable(callSite)) {
 			return;
 		}
-		// !FIXME I don't know support method is here!
+		// !FIXME I don't check android.support.* method here!
 		if (callee.getDeclaringClass().getName().startsWith("android.support")) {
 			return;
 		}
@@ -461,9 +448,8 @@ public class IctApiFinder {
 			BugUnit bug = new BugUnit(bugMsg, tracer.getAllPossibleCallStack(), 0);
 			bugReport.add(bug);
 		} else {
-			Set<Integer> missing = new HashSet<Integer>();
-			for (Iterator<Integer> it = liveLevels.iterator(); it.hasNext();) {
-				int level = it.next();
+			Set<Integer> missing = new HashSet<>();
+			for (int level : liveLevels) {
 				if (!sdkMgr.containMethodAPI(level, callee)) {
 					missing.add(level);
 				}
@@ -492,9 +478,8 @@ public class IctApiFinder {
 			BugUnit bug = new BugUnit(bugMsg, tracer.getAllPossibleCallStack(), 0);
 			bugReport.add(bug);
 		} else {
-			Set<Integer> missing = new HashSet<Integer>();
-			for (Iterator<Integer> it = liveLevels.iterator(); it.hasNext();) {
-				int level = it.next();
+			Set<Integer> missing = new HashSet<>();
+			for (int level : liveLevels) {
 				if (!sdkMgr.containFieldAPI(level, fieldSig)) {
 					missing.add(level);
 				}

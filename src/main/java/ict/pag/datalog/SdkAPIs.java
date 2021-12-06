@@ -11,27 +11,27 @@ import org.slf4j.LoggerFactory;
 import java.util.Set;
 
 public class SdkAPIs {
-	private int mApiLevel;
-	private final Logger logger = LoggerFactory.getLogger(getClass());
-	private Set<String> mTypeSigs;
-	private Map<String, String> type2father; // map type to its father type.
-	private Map<String, String> method2decl; // map method to its declaring type
-	private Map<String, String> methodToDesc; // <signature, descriptor>
-	private Map<String, String> field2decl; // map field to its declaring type
-	private Map<String, Set<String>> type2apis; // map type to its methods' desc and fields' sig.
+	private final int mApiLevel;
+	private final Set<String> mTypeSigs;
+	private final Map<String, String> method2decl; // map method to its declaring type
+	private final Map<String, String> field2decl; // map field to its declaring type
+	private final Map<String, Set<String>> type2apis; // map type to its methods' desc and fields' sig.
 
 	public SdkAPIs(LBWorkspaceConnector conn) {
 		this.mApiLevel = conn.getSdkVersion();
 		long beforeRun = System.nanoTime();
+		Logger logger = LoggerFactory.getLogger(getClass());
 		logger.info("start to load SDK " + mApiLevel);
 		this.field2decl = FactsLoader.getApplicationFieldToDeclMap(conn);
 		this.method2decl = FactsLoader.getApplicationMethodToDeclMap(conn);
-		this.methodToDesc = FactsLoader.getApplicationMethodToDescMap(conn);
-		type2apis = new HashMap<String, Set<String>>();
+		// <signature, descriptor>
+		Map<String, String> methodToDesc = FactsLoader.getApplicationMethodToDescMap(conn);
+		type2apis = new HashMap<>();
 		transferMethods(type2apis, method2decl, methodToDesc);
 		transferFields(type2apis, field2decl);
 		mTypeSigs = FactsLoader.getApplicationTypes(conn);
-		type2father = new HashMap<String, String>();
+		// map type to its father type.
+		Map<String, String> type2father = new HashMap<>();
 		Map<String, String> tmp = FactsLoader.getDirectSuperClass(conn);
 		for (Entry<String, String> entry : tmp.entrySet()) {
 			if (mTypeSigs.contains(entry.getKey())) {
@@ -52,7 +52,7 @@ public class SdkAPIs {
 				Set<String> apis = mType2apis.get(decl);
 				apis.add(desc);
 			} else {
-				Set<String> apis = new HashSet<String>();
+				Set<String> apis = new HashSet<>();
 				apis.add(desc);
 				mType2apis.put(decl, apis);
 			}
@@ -67,15 +67,11 @@ public class SdkAPIs {
 				Set<String> apis = mType2apis.get(decl);
 				apis.add(mthd);
 			} else {
-				Set<String> apis = new HashSet<String>();
+				Set<String> apis = new HashSet<>();
 				apis.add(mthd);
 				mType2apis.put(decl, apis);
 			}
 		}
-	}
-
-	public boolean containType(String sig) {
-		return this.mTypeSigs.contains(sig);
 	}
 
 	public boolean containMethod(String sig) {
@@ -91,11 +87,7 @@ public class SdkAPIs {
 			return false;
 		}
 		Set<String> apis = type2apis.get(type);
-		if (apis.contains(desc)) {
-			return true;
-		} else {
-			return false;
-		}
+		return apis.contains(desc);
 	}
 
 	public Set<String> getMethodSigs() {
@@ -104,14 +96,6 @@ public class SdkAPIs {
 
 	public Set<String> getFieldSigs() {
 		return field2decl.keySet();
-	}
-
-	public int getmApiLevel() {
-		return mApiLevel;
-	}
-
-	public String getFather(String type) {
-		return type2father.get(type);
 	}
 
 	public void dump() {

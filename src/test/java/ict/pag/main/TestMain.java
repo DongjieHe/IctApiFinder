@@ -10,7 +10,7 @@ import soot.Scene;
 import soot.SootClass;
 
 public class TestMain {
-	public static void main(String args[]) throws IOException {
+	public static void main(String[] args) throws IOException {
 		PrintStream ps = new PrintStream(new FileOutputStream("MAIN" + new Date().getTime()));
 		System.setOut(ps);
 		String apkPath = "/home/hedj/Work/android/fdroidNewest/com.alexcruz.papuhwalls_10.apk";

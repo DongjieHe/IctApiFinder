@@ -5,9 +5,9 @@ import java.util.List;
 import soot.SootMethod;
 
 public class BugUnit {
-	private String bugMsg;
-	private List<List<SootMethod>> mPossibleCallStack;
-	private int bugType;
+	private final String bugMsg;
+	private final List<List<SootMethod>> mPossibleCallStack;
+	private final int bugType;
 
 	public BugUnit(String msg, List<List<SootMethod>> st, int tp) {
 		bugMsg = msg;
@@ -15,41 +15,34 @@ public class BugUnit {
 		bugType = tp;
 	}
 
-	public int getBugType() {
-		return bugType;
-	}
-
 	@Override
 	public String toString() {
 		String warnningOrBug = bugType == 0 ? "WARNING: " : "BUG: ";
-		String retStr = warnningOrBug + bugMsg + "\n";
-		return retStr;
+		return warnningOrBug + bugMsg + "\n";
 	}
 
 	public String toString(boolean fullDetail) {
-		if (bugType == 0) {
+		if(bugType == 0) {
 			return "WARNING: " + bugMsg + "\n";
 		}
-		String retStr = "BUG: " + bugMsg + "\n";
+		StringBuilder retStr = new StringBuilder("BUG: " + bugMsg + "\n");
 		assert mPossibleCallStack.size() > 0;
-		if (fullDetail == false) {
-			retStr += "reachable path:\n";
+		if (!fullDetail) {
+			retStr.append("reachable path:\n");
 			List<SootMethod> st = mPossibleCallStack.get(0);
-			for (int i = 0; i < st.size(); ++i) {
-				SootMethod sm = st.get(i);
-				retStr += "\t-->" + sm.getSignature() + "\n";
+			for (SootMethod sm : st) {
+				retStr.append("\t-->").append(sm.getSignature()).append("\n");
 			}
 		} else {
-			retStr += "all reachable paths:\n";
+			retStr.append("all reachable paths:\n");
 			for (int j = 0; j < mPossibleCallStack.size(); ++j) {
-				retStr += "\treachable path " + (j + 1) + ":\n";
+				retStr.append("\treachable path ").append(j + 1).append(":\n");
 				List<SootMethod> st = mPossibleCallStack.get(j);
-				for (int i = 0; i < st.size(); ++i) {
-					SootMethod sm = st.get(i);
-					retStr += "\t\t-->" + sm.getSignature() + "\n";
+				for (SootMethod sm : st) {
+					retStr.append("\t\t-->").append(sm.getSignature()).append("\n");
 				}
 			}
 		}
-		return retStr;
+		return retStr.toString();
 	}
 }

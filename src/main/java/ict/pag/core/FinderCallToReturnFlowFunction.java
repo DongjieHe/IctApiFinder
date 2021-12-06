@@ -9,9 +9,11 @@ import soot.Unit;
 
 public class FinderCallToReturnFlowFunction implements FlowFunction<FinderFact> {
 	private Unit mCallSite;
+	private Unit mReturnSite;
 
 	public FinderCallToReturnFlowFunction(Unit callSite, Unit returnSite) {
 		mCallSite = callSite;
+		mReturnSite = returnSite;
 	}
 
 	@Override
@@ -19,7 +21,7 @@ public class FinderCallToReturnFlowFunction implements FlowFunction<FinderFact> 
 		if (ConcernUnits.v().containAPI(mCallSite)) {
 			ConcernUnits.v().add(mCallSite, source.getLevel());
 		}
-		Set<FinderFact> retSet = new HashSet<FinderFact>();
+		Set<FinderFact> retSet = new HashSet<>();
 		retSet.add(source);
 		return retSet;
 	}
